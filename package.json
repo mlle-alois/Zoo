@@ -1,0 +1,24 @@
+{
+  "name": "zoo",
+  "version": "1.0.0",
+  "description": "API de gestion de ZOO",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mlle-alois/Zoo.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mlle-alois/Zoo/issues"
+  },
+  "homepage": "https://github.com/mlle-alois/Zoo#readme",
+  "dependencies": {
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.3"
+  }
+}
