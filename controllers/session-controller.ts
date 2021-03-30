@@ -41,7 +41,9 @@ export class SessionController {
     async getSessionByToken(token: string): Promise<UserModel | null> {
         //récupération de la session
         const res = await this.connection.query(`SELECT session_id, token, createdAt, updatedAt, deletedAt, user_id 
-                                                    FROM SESSION where token = ${token}`);
+                                                    FROM SESSION where token = ?`, [
+            token
+        ]);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
@@ -61,10 +63,28 @@ export class SessionController {
     }
 
     /**
+     * récupérations des sessions associées à l'user id
+     * @param userId
+     */
+    async deleteOldSessionsByUserId(userId: number): Promise<boolean> {
+        try {
+            //suppression de la session
+            const res = await this.connection.query(`DELETE FROM SESSION WHERE user_id = ?`, [
+                userId
+            ]);
+            const headers = res[0] as ResultSetHeader;
+            return headers.affectedRows === 1;
+        } catch (err) {
+            console.error(err);
+            return false;
+        }
+    }
+
+    /**
      * Suppression d'une session depuis le token
      * @param token
      */
-    async removeSessionByToken(token: string): Promise<boolean | null> {
+    async deleteSessionByToken(token: string): Promise<boolean | null> {
         try {
             //suppression de la session
             const res = await this.connection.query(`DELETE FROM SESSION WHERE token = ?`, [

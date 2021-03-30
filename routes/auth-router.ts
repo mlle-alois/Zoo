@@ -4,6 +4,7 @@ import {authMiddleWare} from "../middlewares/auth-middleware";
 import {AuthController} from "../controllers";
 import {UserController} from "../controllers";
 import {SessionController} from "../controllers/session-controller";
+import {SessionModel} from "../models/session-model";
 
 const authRouter = express.Router();
 
@@ -76,7 +77,7 @@ authRouter.post("/login", async function (req, res) {
 
 /**
  * déconnexion d'un utilisateur
- * URL : auth/logout
+ * URL : auth/logout?token=$2b$05$eiTDmmFGXYluk1RBXOKAD.r1GD8jT4naaeO5dL8D9ea/Jg//dVt6a
  * Requete : DELETE
  */
 //2e param -> authMiddleWare : vérifier que l'utilisateur est connecté pour le déconnecter
@@ -88,7 +89,7 @@ authRouter.delete("/logout", authMiddleWare, async function (req, res) {
         res.status(400).end;
     }
     //suppression
-    const success = await sessionController.removeSessionByToken(token);
+    const success = await sessionController.deleteSessionByToken(token);
     if (success) {
         // pas de contenu mais a fonctionné
         res.status(204).end();

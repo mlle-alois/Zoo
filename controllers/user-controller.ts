@@ -1,6 +1,6 @@
 import {IUserProps, UserModel} from "../models/user-model";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
-import {hash} from "bcrypt";
+import {compare, hash} from "bcrypt";
 
 interface UserGetAllOptions {
     limit?: number;
@@ -108,17 +108,19 @@ export class UserController {
      * @param password -> non haché
      */
     async getUserByMailAndPassword(mail: string, password: string): Promise<UserModel | null> {
-        const hachedPassword = await hash(password, 5);
         const res = await this.connection.query(`SELECT user_id, user_mail, user_password, user_name, user_firstname, user_phone_number, user_type_id 
-                                                    FROM USER where user_mail = ? and user_password = ?`, [
-            mail,
-            hachedPassword
+                                                    FROM USER where user_mail = ?`, [
+            mail
         ]);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
             if (rows.length > 0) {
                 const row = rows[0];
+                const isSamePassword = await compare(password, row["user_password"]);
+                if(!isSamePassword) {
+                    return null;
+                }
                 return new UserModel({
                     userId: Number.parseInt(row["user_id"]),
                     mail: row["user_mail"],
@@ -137,7 +139,7 @@ export class UserController {
      * Suppression d'un utilisateur depuis son :
      * @param userId
      */
-    async removeUserById(userId: number): Promise<boolean> {
+    async deleteUserById(userId: number): Promise<boolean> {
         try {
             const res = await this.connection.query(`DELETE FROM USER WHERE user_id = ${userId}`);
             const headers = res[0] as ResultSetHeader;
