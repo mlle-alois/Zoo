@@ -38,7 +38,7 @@ export class SessionController {
      * Récupération d'une session depuis le token
      * @param token
      */
-    async getSessionByToken(token: string): Promise<UserModel | null> {
+    async getSessionByToken(token: string): Promise<SessionModel | null> {
         //récupération de la session
         const res = await this.connection.query(`SELECT session_id, token, createdAt, updatedAt, deletedAt, user_id 
                                                     FROM SESSION where token = ?`, [
@@ -60,6 +60,29 @@ export class SessionController {
             }
         }
         return null;
+    }
+
+    /**
+     * Création d'une session
+     * @param sessionId
+     * @param token
+     * @param userId
+     */
+    async createSession(sessionId: number, token: string, userId: number): Promise<SessionModel | null> {
+        try {
+            //création de la session
+            await this.connection.execute(`INSERT INTO SESSION (session_id, token, createdAt, updatedAt, user_id) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)`, [
+                //incrémentation manuelle
+                sessionId,
+                token,
+                userId
+            ]);
+            //récupération de la session créée ou null si cela n'a pas fonctionné
+            return await this.userController.getUserById(userId);
+        } catch (err) {
+            console.error(err);
+            return null;
+        }
     }
 
     /**

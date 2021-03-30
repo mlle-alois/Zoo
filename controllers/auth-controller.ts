@@ -71,12 +71,7 @@ export class AuthController {
             //suppression des anciennes sessions non fermées
             await this.sessionController.deleteOldSessionsByUserId(user.userId ? user.userId : 0);
             //création de la session
-            await this.connection.execute(`INSERT INTO SESSION (session_id, token, createdAt, updatedAt, user_id) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)`, [
-                //incrémentation manuelle
-                await this.sessionController.getMaxSessionId() + 1,
-                token,
-                user.userId
-            ]);
+            await this.sessionController.createSession(await this.sessionController.getMaxSessionId() + 1, token, user.userId ? user.userId : 0);
             //récupération de la session ouverte ou null si la connexion a échoué
             return await this.sessionController.getSessionByToken(token);
         } catch (err) {

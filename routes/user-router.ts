@@ -1,6 +1,7 @@
 import express from "express";
 import {UserController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
+import {authMiddleWare} from "../middlewares/auth-middleware";
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
  * URL : zoo/user?limit={x}&offset={x}
  * Requete : GET
  */
-router.get("/", async function (req, res) {
+router.get("/", authMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const userController = new UserController(connection);
     const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : undefined;
@@ -26,7 +27,7 @@ router.get("/", async function (req, res) {
  * URL : zoo/user/:id
  * Requete : GET
  */
-router.get("/:id", async function (req, res) {
+router.get("/:id", authMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const userController = new UserController(connection);
     //récupération de l'utilisateur
@@ -43,7 +44,7 @@ router.get("/:id", async function (req, res) {
  * URL : zoo/user/:id
  * Requete : PUT
  */
-router.put("/:id", async function (req, res) {
+router.put("/:id", authMiddleWare, async function (req, res) {
     const userId = Number.parseInt(req.params.id);
     const mail = req.body.mail;
     const password = req.body.password;
@@ -82,7 +83,7 @@ router.put("/:id", async function (req, res) {
  * URL : zoo/user/:id
  * Requete : DELETE
  */
-router.delete("/:id", async function (req, res) {
+router.delete("/:id", authMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const userController = new UserController(connection);
     //suppression
