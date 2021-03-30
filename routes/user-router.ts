@@ -86,7 +86,7 @@ router.delete("/:id", async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const userController = new UserController(connection);
     //suppression
-    const success = await userController.removeUserById(Number.parseInt(req.params.id));
+    const success = await userController.deleteUserById(Number.parseInt(req.params.id));
     if (success) {
         // pas de contenu mais a fonctionné
         res.status(204).end();

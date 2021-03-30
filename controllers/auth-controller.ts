@@ -68,9 +68,12 @@ export class AuthController {
         //génération de token depuis la date actuelle et le login
         const token = await hash(Date.now() + mail, 5);
         try {
+            //suppression des anciennes sessions non fermées
+            await this.sessionController.deleteOldSessionsByUserId(user.userId ? user.userId : 0);
             //création de la session
-            await this.connection.execute(`INSERT INTO SESSION (session_id, token, createdAt, updatedAt, deletedAt, user_id) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null, ?)`, [
-                await this.sessionController.getMaxSessionId(),
+            await this.connection.execute(`INSERT INTO SESSION (session_id, token, createdAt, updatedAt, user_id) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)`, [
+                //incrémentation manuelle
+                await this.sessionController.getMaxSessionId() + 1,
                 token,
                 user.userId
             ]);
