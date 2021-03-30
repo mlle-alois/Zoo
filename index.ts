@@ -9,6 +9,7 @@ const app: Express = express();
 
 app.use(bodyParser.json());
 
+//création des routes utilisables par l'application
 buildRoutes(app);
 
 const port = process.env.PORT || 3003;

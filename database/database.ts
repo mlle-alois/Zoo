@@ -4,7 +4,10 @@ export class DatabaseUtils {
 
     private static connection?: Connection;
 
-    static async getConnexion(): Promise<Connection> {
+    /**
+     * Connexion à la BDD
+     */
+    static async getConnection(): Promise<Connection> {
         if (!DatabaseUtils.connection) {
             DatabaseUtils.connection = await createConnection({
                 host: process.env.DB_HOST,

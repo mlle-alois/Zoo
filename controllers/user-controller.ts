@@ -1,5 +1,6 @@
-import {UserModel} from "../models/user-model";
+import {IUserProps, UserModel} from "../models/user-model";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
+import {hash} from "bcrypt";
 
 interface UserGetAllOptions {
     limit?: number;
@@ -7,7 +8,7 @@ interface UserGetAllOptions {
 }
 
 interface UserUpdateOptions {
-    id: string;
+    userId: number;
     mail?: string;
     password?: string;
     name?: string;
@@ -24,16 +25,22 @@ export class UserController {
         this.connection = connection;
     }
 
-    async getAll(options?: UserGetAllOptions): Promise<UserModel[]> {
+    /**
+     * Récupération de tous les utilisateurs
+     * @param options -> Limit et offset de la requete
+     */
+    async getAllUsers(options?: UserGetAllOptions): Promise<UserModel[]> {
+        //récupération des options
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
+        //récupération des utilisateurs
         const res = await this.connection.query(`SELECT user_id, user_mail, user_password, user_name, user_firstname, user_phone_number, user_type_id 
                                                     FROM USER LIMIT ${offset}, ${limit}`);
         const data = res[0];
         if (Array.isArray(data)) {
             return (data as RowDataPacket[]).map(function (row: any) {
                 return new UserModel({
-                    userId: row["user_id"],
+                    userId: Number.parseInt(row["user_id"]),
                     mail: row["user_mail"],
                     password: row["user_password"],
                     firstname: row["user_firstname"],
@@ -46,8 +53,12 @@ export class UserController {
         return [];
     }
 
-    async getMaxId(): Promise<number> {
-        const res = await this.connection.query('SELECT MAX(user_id) as maxId FROM USER'); // escape pour éviter les injections SQL
+    /**
+     * Récupération de l'id d'utilisateur maximum existant
+     * Utile pour l'incrémentation manuelle
+     */
+    async getMaxUserId(): Promise<number> {
+        const res = await this.connection.query('SELECT MAX(user_id) as maxId FROM USER');
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
@@ -64,16 +75,21 @@ export class UserController {
         return 0;
     }
 
-    async getById(id: string): Promise<UserModel | null> {
+    /**
+     * Récupération d'un utilisateur depuis son :
+     * @param userId
+     */
+    async getUserById(userId: number): Promise<UserModel | null> {
+        //récupération de l'utilisateur
         const res = await this.connection.query(`SELECT user_id, user_mail, user_password, user_name, user_firstname, user_phone_number, user_type_id 
-                                                    FROM USER where user_id = ${escape(id)}`);
+                                                    FROM USER where user_id = ${userId}`);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
             if (rows.length > 0) {
                 const row = rows[0];
                 return new UserModel({
-                    userId: row["user_id"],
+                    userId: Number.parseInt(row["user_id"]),
                     mail: row["user_mail"],
                     password: row["user_password"],
                     firstname: row["user_firstname"],
@@ -86,38 +102,45 @@ export class UserController {
         return null;
     }
 
-    //TODO adapter à user
-    /*async create(casino: ICasinoProps): Promise<CasinoModel | null> {
-        try {
-            const res = await this.connection.execute(`INSERT INTO CASINO (name, capacity, price) VALUES (?, ?, ?)`, [
-                casino.name,
-                casino.capacity,
-                casino.price
-            ]);
-            const headers = res[0] as ResultSetHeader;
-
-            return new CasinoModel({
-                id: "" + headers.insertId,
-                ...casino // permet de mettre à plat un objet
-                //équivalent à :
-                //name: casino.name,
-                //capacity: casino.capacity,
-                //price: casino.price
-
-                //const copy = {...casino, test: "bonjour"};
-                //console.log(copy.test);
-            });
-        } catch (err) {
-            console.error(err); // log dans un fichier c'est mieux
-            return null;
+    /**
+     * Récupération d'un utilisateur via :
+     * @param mail
+     * @param password -> non haché
+     */
+    async getUserByMailAndPassword(mail: string, password: string): Promise<UserModel | null> {
+        const hachedPassword = await hash(password, 5);
+        const res = await this.connection.query(`SELECT user_id, user_mail, user_password, user_name, user_firstname, user_phone_number, user_type_id 
+                                                    FROM USER where user_mail = ? and user_password = ?`, [
+            mail,
+            hachedPassword
+        ]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                return new UserModel({
+                    userId: Number.parseInt(row["user_id"]),
+                    mail: row["user_mail"],
+                    password: row["user_password"],
+                    firstname: row["user_firstname"],
+                    name: row["user_name"],
+                    phoneNumber: row["user_phone_number"],
+                    typeId: row["user_type_id"]
+                });
+            }
         }
+        return null;
     }
 
-    async removeById(id: string): Promise<boolean> {
+    /**
+     * Suppression d'un utilisateur depuis son :
+     * @param userId
+     */
+    async removeUserById(userId: number): Promise<boolean> {
         try {
-            const res = await this.connection.query(`DELETE FROM CASINO WHERE id = ${escape(id)}`); // escape pour éviter les injections SQL
+            const res = await this.connection.query(`DELETE FROM USER WHERE user_id = ${userId}`);
             const headers = res[0] as ResultSetHeader;
-            console.log(headers)
             return headers.affectedRows === 1;
         } catch (err) {
             console.error(err);
@@ -125,34 +148,50 @@ export class UserController {
         }
     }
 
-    async update(options: CasinoUpdateOptions): Promise<CasinoModel | null> {
+    /**
+     * Modification des informations d'un utilisateur renseignées dans les options
+     * @param options -> informations à modifier
+     */
+    async updateUser(options: UserUpdateOptions): Promise<UserModel | null> {
         const setClause: string[] = [];
         const params = [];
         //création des contenus de la requête dynamiquement
+        if (options.mail !== undefined) {
+            setClause.push("user_mail = ?");
+            params.push(options.mail);
+        }
+        if (options.password !== undefined) {
+            setClause.push("user_password = ?");
+            params.push(options.password);
+        }
         if (options.name !== undefined) {
-            setClause.push("name = ?");
+            setClause.push("user_name = ?");
             params.push(options.name);
         }
-        if (options.capacity !== undefined) {
-            setClause.push("capacity = ?");
-            params.push(options.capacity);
+        if (options.firstname !== undefined) {
+            setClause.push("user_firstname = ?");
+            params.push(options.firstname);
         }
-        if (options.price !== undefined) {
-            setClause.push("price = ?");
-            params.push(options.price);
+        if (options.phoneNumber !== undefined) {
+            setClause.push("user_phone_number = ?");
+            params.push(options.phoneNumber);
         }
-        params.push(options.id);
+        if (options.typeId !== undefined) {
+            setClause.push("user_type_id = ?");
+            params.push(options.typeId);
+        }
+        params.push(options.userId);
         try {
-            const res = await this.connection.execute(`UPDATE CASINO SET ${setClause.join(", ")} WHERE id = ?`, params); //join fusionne les éléments d'un tableau avec un séparateur
+            const res = await this.connection.execute(`UPDATE USER SET ${setClause.join(", ")} WHERE user_id = ?`, params);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
-                return this.getById(options.id);
+                return this.getUserById(options.userId);
             }
             return null;
         } catch (err) {
             console.error(err);
             return null;
         }
-    }*/
+    }
 
 }
