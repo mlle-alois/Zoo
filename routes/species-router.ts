@@ -1,5 +1,5 @@
 import express from "express";
-import {AuthController, SpeciesController, UserController} from "../controllers";
+import {SpeciesController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authRouter} from "./auth-router";
 import {authMiddleWare} from "../middlewares/auth-middleware";
@@ -8,7 +8,7 @@ const router = express.Router();
 
 /**
  * récupération de toutes les espèces
- * URL : zoo/user?limit={x}&offset={x}
+ * URL : /zoo/species?limit={x}&offset={x}
  * Requete : GET
  */
 router.get("/", authMiddleWare, async function (req, res) {
@@ -25,24 +25,24 @@ router.get("/", authMiddleWare, async function (req, res) {
 
 /**
  * récupération d'une espèce selon son id
- * URL : zoo/user/:id
+ * URL : /zoo/species/:id
  * Requete : GET
  */
 router.get("/:id",authMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const speciesController = new SpeciesController(connection);
     //récupération de l'espèce
-    const user = await speciesController.getSpeciesById(Number.parseInt(req.params.id));
-    if (user === null) {
+    const species = await speciesController.getSpeciesById(Number.parseInt(req.params.id));
+    if (species === null) {
         res.status(404).end();
     } else {
-        res.json(user);
+        res.json(species);
     }
 });
 
 /**
- * modification d'un utilisateur selon son id
- * URL : zoo/user/:id
+ * modification d'une espèce selon son id
+ * URL : /zoo/species/:id
  * Requete : PUT
  */
 router.put("/:id",authMiddleWare, async function (req, res) {
@@ -70,8 +70,8 @@ router.put("/:id",authMiddleWare, async function (req, res) {
 });
 
 /**
- * suppression d'un utilisateur selon son id
- * URL : zoo/user/:id
+ * suppression d'une espèce selon son id
+ * URL : /zoo/species/:id
  * Requete : DELETE
  */
 router.delete("/:id", authMiddleWare,async function (req, res) {
@@ -90,8 +90,8 @@ router.delete("/:id", authMiddleWare,async function (req, res) {
 router.post("/add", authMiddleWare,async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const speciesController = new SpeciesController(connection);
-    //idUserMax en base
-    const id = await speciesController.getMaxSpeciesId();
+    //species_id Max en base
+    const id = await speciesController.getMaxSpeciesId() + 1;
     const name = req.body.name;
     //toutes les informations sont obligatoires
     if ( name === undefined ) {

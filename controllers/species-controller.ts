@@ -63,15 +63,15 @@ export class SpeciesController {
 
     /**
      * Récupération d'une espèce via :
-     * @param userId
+     * @param speciesId
      */
-    async getSpeciesById(userId: number | undefined): Promise<SpeciesModel | null> {
+    async getSpeciesById(speciesId: number | undefined): Promise<SpeciesModel | null> {
         //récupération de l'utilisateur
-        if(userId === undefined)
+        if(speciesId === undefined)
             return null;
 
         const res = await this.connection.query(`SELECT species_id, species_name 
-                                                    FROM SPECIES where species_id = ${userId}`);
+                                                    FROM SPECIES where species_id = ${speciesId}`);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
@@ -88,8 +88,7 @@ export class SpeciesController {
 
     /**
      * Récupération d'une espèce via :
-     * @param mail
-     * @param password -> non haché
+     * @param name
      */
     async getSpeciesByName(name:string): Promise<SpeciesModel | null> {
 
@@ -127,7 +126,7 @@ export class SpeciesController {
 
     /**
      * Modification des informations d'une espèce renseignées dans les options
-     * @param options -> id: ni
+     * @param options
      */
     async updateSpecies(options: ISpeciesProps): Promise<SpeciesModel | null> {
         const setClause: string[] = [];
