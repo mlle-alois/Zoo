@@ -41,7 +41,7 @@ export class SessionController {
     async getSessionByToken(token: string): Promise<UserModel | null> {
         //récupération de la session
         const res = await this.connection.query(`SELECT session_id, token, createdAt, updatedAt, deletedAt, user_id 
-                                                    FROM SESSION where token = ?`, [
+                                                    FROM SESSION where token = ? `, [
             token
         ]);
         const data = res[0];
