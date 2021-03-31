@@ -1,4 +1,4 @@
-import {IUserProps, UserModel} from "../models/user-model";
+import {UserModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {compare, hash} from "bcrypt";
 
@@ -164,7 +164,8 @@ export class UserController {
         }
         if (options.password !== undefined) {
             setClause.push("user_password = ?");
-            params.push(options.password);
+            const hachedPassword = await hash(options.password, 5);
+            params.push(hachedPassword);
         }
         if (options.name !== undefined) {
             setClause.push("user_name = ?");

@@ -24,7 +24,7 @@ export class SpeciesController {
         //récupération des options
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
-        //récupération des utilisateurs
+        //récupération des espèces
         const res = await this.connection.query(`SELECT species_id, species_name 
                                                     FROM SPECIES LIMIT ${offset}, ${limit}`);
         const data = res[0];
@@ -66,7 +66,6 @@ export class SpeciesController {
      * @param speciesId
      */
     async getSpeciesById(speciesId: number | undefined): Promise<SpeciesModel | null> {
-        //récupération de l'utilisateur
         if(speciesId === undefined)
             return null;
 
@@ -92,7 +91,7 @@ export class SpeciesController {
      */
     async getSpeciesByName(name:string): Promise<SpeciesModel | null> {
 
-        //récupération de l'utilisateur
+        //récupération de l'espèce
         const res = await this.connection.query(`SELECT species_id, species_name 
                                                     FROM SPECIES where species_name = ${name}`);
         const data = res[0];
@@ -153,6 +152,10 @@ export class SpeciesController {
         }
     }
 
+    /**
+     * création d'une espèce
+     * @param options
+     */
     async createSpecies(options: ISpeciesProps): Promise<SpeciesModel | null> {
         try {
             const res = await this.connection.execute("INSERT INTO SPECIES (species_id,species_name) VALUES (?,?)",[

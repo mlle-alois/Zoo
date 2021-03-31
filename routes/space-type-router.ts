@@ -1,105 +1,104 @@
 import express from "express";
-import {SpeciesController} from "../controllers";
+import {SpaceTypeController} from "../controllers/space-type-controller";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
 import {isClientConnected} from "../acces/give-access";
 
-const speciesRouter = express.Router();
+const spaceTypeRouter = express.Router();
 
 /**
- * récupération de toutes les espèces
- * URL : /zoo/species?limit={x}&offset={x}
+ * récupération de tous les types d'espaces
+ * URL : /zoo/space-type?limit={x}&offset={x}
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-speciesRouter.get("/", authUserMiddleWare, async function (req, res) {
+spaceTypeRouter.get("/", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
-        const speciesController = new SpeciesController(connection);
+        const spaceTypeController = new SpaceTypeController(connection);
         const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : undefined;
         const offset = req.query.offset ? Number.parseInt(req.query.offset as string) : undefined;
-        const speciesList = await speciesController.getAllSpecies({
+        const spaceTypeList = await spaceTypeController.getAllSpaceType({
             limit,
             offset
         });
-        res.json(speciesList);
+        res.json(spaceTypeList);
     }
     res.status(403).end();
 });
 
 /**
- * récupération d'une espèce selon son id
- * URL : /zoo/species/:id
+ * récupération d'un type d'espace selon son id
+ * URL : /zoo/space-type/:id
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-speciesRouter.get("/:id", authUserMiddleWare, async function (req, res) {
+spaceTypeRouter.get("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
-        const speciesController = new SpeciesController(connection);
-        //récupération de l'espèce
-        const species = await speciesController.getSpeciesById(Number.parseInt(req.params.id));
-        if (species === null) {
+        const spaceTypeController = new SpaceTypeController(connection);
+        const spaceType = await spaceTypeController.getSpaceTypeById(Number.parseInt(req.params.id));
+        if (spaceType === null) {
             res.status(404).end();
         } else {
-            res.json(species);
+            res.json(spaceType);
         }
     }
     res.status(403).end();
 });
 
 /**
- * modification d'une espèce selon son id
- * URL : /zoo/species/:id
+ * modification d'un type d'espace selon son id
+ * URL : /zoo/space-type/:id
  * Requete : PUT
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-speciesRouter.put("/:id", authUserMiddleWare, async function (req, res) {
+spaceTypeRouter.put("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
-        const id = Number.parseInt(req.params.id);
-        const name = req.body.name;
+        const spaceTypeId = Number.parseInt(req.params.id);
+        const libelle = req.body.libelle;
 
         //invalide s'il n'y a pas d'id ou qu'aucune option à modifier n'est renseignée
-        if (id === undefined || name === undefined) {
+        if (spaceTypeId === undefined || libelle === undefined) {
             res.status(400).end();
             return;
         }
         const connection = await DatabaseUtils.getConnection();
-        const speciesController = new SpeciesController(connection);
+        const spaceTypeController = new SpaceTypeController(connection);
         //modification
-        const species = await speciesController.updateSpecies({
-            id,
-            name,
+        const spaceType = await spaceTypeController.updateSpaceType({
+            idSpaceType: spaceTypeId,
+            libelle: libelle,
         });
-        if (species === null) {
+        if (spaceType === null) {
             res.status(404);
         } else {
-            res.json(species);
+            res.json(spaceType);
         }
     }
     res.status(403).end();
 });
 
 /**
- * suppression d'une espèce selon son id
- * URL : /zoo/species/:id
+ * suppression d'un type d'espace selon son id
+ * URL : /zoo/space-type/:id
  * Requete : DELETE
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-speciesRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
+spaceTypeRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
-        const speciesController = new SpeciesController(connection);
+        const spaceTypeController = new SpaceTypeController(connection);
         //suppression
-        const success = await speciesController.removeSpeciesById(Number.parseInt(req.params.id));
+        const success = await spaceTypeController.removeSpaceTypeById(Number.parseInt(req.params.id));
         if (success) {
             // pas de contenu mais a fonctionné
             res.status(204).end();
@@ -111,34 +110,33 @@ speciesRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
 });
 
 /**
- * ajout d'une espèce
- * URL : /zoo/species/add
+ * ajout d'un type d'espace
+ * URL : /zoo/space-type/add
  * Requete : POST
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-speciesRouter.post("/add", authUserMiddleWare, async function (req, res) {
+spaceTypeRouter.post("/add", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
-        const speciesController = new SpeciesController(connection);
-        //species_id Max en base
-        const id = await speciesController.getMaxSpeciesId() + 1;
-        const name = req.body.name;
+        const spaceTypeController = new SpaceTypeController(connection);
+        const idSpaceType = await spaceTypeController.getMaxSpaceTypeId() + 1;
+        const libelle = req.body.libelle;
         //toutes les informations sont obligatoires
-        if (name === undefined) {
+        if (libelle === undefined) {
             res.status(400).end();
             return;
         }
-        //Ajout d'une espèce
-        const species = await speciesController.createSpecies({
-            id,
-            name
+        //Ajout d'un type d'espace
+        const spaceType = await spaceTypeController.createSpaceType({
+            idSpaceType,
+            libelle
         })
 
-        if (species !== null) {
+        if (spaceType !== null) {
             res.status(201);
-            res.json(species);
+            res.json(spaceType);
         } else {
             res.status(400).end();
         }
@@ -147,5 +145,5 @@ speciesRouter.post("/add", authUserMiddleWare, async function (req, res) {
 });
 
 export {
-    speciesRouter
+    spaceTypeRouter
 };

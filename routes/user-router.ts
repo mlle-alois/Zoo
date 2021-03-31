@@ -4,7 +4,7 @@ import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
 import {isClientConnected, isConcernedUserOrAdmin} from "../acces/give-access";
 
-const router = express.Router();
+const userRouter = express.Router();
 
 /**
  * récupération de tous les utilisateurs
@@ -13,7 +13,7 @@ const router = express.Router();
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-router.get("/", authUserMiddleWare, async function (req, res) {
+userRouter.get("/", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
@@ -36,7 +36,7 @@ router.get("/", authUserMiddleWare, async function (req, res) {
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-router.get("/:id", authUserMiddleWare, async function (req, res) {
+userRouter.get("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
@@ -59,7 +59,7 @@ router.get("/:id", authUserMiddleWare, async function (req, res) {
  * ACCES : ADMIN ou utilisateur concerné
  * Nécessite d'être connecté : OUI
  */
-router.put("/:id", authUserMiddleWare, async function (req, res) {
+userRouter.put("/:id", authUserMiddleWare, async function (req, res) {
     const userId = Number.parseInt(req.params.id);
     const mail = req.body.mail;
     const password = req.body.password;
@@ -104,7 +104,7 @@ router.put("/:id", authUserMiddleWare, async function (req, res) {
  * ACCES : ADMIN ou utilisateur concerné
  * Nécessite d'être connecté : OUI
  */
-router.delete("/:id", authUserMiddleWare, async function (req, res) {
+userRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
     const userId = Number.parseInt(req.params.id);
     if (userId === undefined) {
         res.status(400).end();
@@ -126,4 +126,6 @@ router.delete("/:id", authUserMiddleWare, async function (req, res) {
     }
 });
 
-export default router;
+export {
+    userRouter
+};
