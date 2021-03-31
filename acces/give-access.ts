@@ -3,6 +3,10 @@ import {SessionController, UserController} from "../controllers";
 import express from "express";
 import {ADMIN_USER_TYPE_ID, CLIENT_USER_TYPE_ID} from "../consts";
 
+/**
+ * Récupération du token autorisé/connecté
+ * @param req
+ */
 export function getAuthorizedToken(req: express.Request): string {
     const auth = req.headers['authorization'];
     if (auth !== undefined) {
