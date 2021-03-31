@@ -1,6 +1,6 @@
 import express from "express";
 import {DatabaseUtils} from "../database/database";
-import {authMiddleWare} from "../middlewares/auth-middleware";
+import {authOtherThanClientMiddleWare} from "../middlewares/auth-middleware";
 import {AuthController} from "../controllers";
 import {UserController} from "../controllers";
 import {SessionController} from "../controllers/session-controller";
@@ -83,7 +83,7 @@ authRouter.post("/login", async function (req, res) {
  * Requete : DELETE
  */
 //2e param -> authMiddleWare : vérifier que l'utilisateur est connecté pour le déconnecter
-authRouter.delete("/logout", authMiddleWare, async function (req, res) {
+authRouter.delete("/logout", authOtherThanClientMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const sessionController = new SessionController(connection);
     const token = req.query.token ? req.query.token as string : "";

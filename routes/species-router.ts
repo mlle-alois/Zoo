@@ -2,7 +2,7 @@ import express from "express";
 import {SpeciesController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authRouter} from "./auth-router";
-import {authMiddleWare} from "../middlewares/auth-middleware";
+import {authOtherThanClientMiddleWare} from "../middlewares/auth-middleware";
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ const router = express.Router();
  * URL : /zoo/species?limit={x}&offset={x}
  * Requete : GET
  */
-router.get("/", authMiddleWare, async function (req, res) {
+router.get("/", authOtherThanClientMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const speciesController = new SpeciesController(connection);
     const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : undefined;
@@ -28,7 +28,7 @@ router.get("/", authMiddleWare, async function (req, res) {
  * URL : /zoo/species/:id
  * Requete : GET
  */
-router.get("/:id",authMiddleWare, async function (req, res) {
+router.get("/:id",authOtherThanClientMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const speciesController = new SpeciesController(connection);
     //récupération de l'espèce
@@ -45,7 +45,7 @@ router.get("/:id",authMiddleWare, async function (req, res) {
  * URL : /zoo/species/:id
  * Requete : PUT
  */
-router.put("/:id",authMiddleWare, async function (req, res) {
+router.put("/:id",authOtherThanClientMiddleWare, async function (req, res) {
 
     const id = Number.parseInt(req.params.id);
     const name = req.body.name;
@@ -74,7 +74,7 @@ router.put("/:id",authMiddleWare, async function (req, res) {
  * URL : /zoo/species/:id
  * Requete : DELETE
  */
-router.delete("/:id", authMiddleWare,async function (req, res) {
+router.delete("/:id", authOtherThanClientMiddleWare,async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const speciesController = new SpeciesController(connection);
     //suppression
@@ -87,7 +87,7 @@ router.delete("/:id", authMiddleWare,async function (req, res) {
     }
 });
 
-router.post("/add", authMiddleWare,async function (req, res) {
+router.post("/add", authOtherThanClientMiddleWare,async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const speciesController = new SpeciesController(connection);
     //species_id Max en base
