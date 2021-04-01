@@ -24,7 +24,6 @@ export class AnimalController {
         //récupération des options
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
-        //récupération des utilisateurs
         const res = await this.connection.query(`SELECT animal_id, animal_name, animal_age, species_id, space_id 
                                                     FROM ANIMAL LIMIT ${offset}, ${limit}`);
         const data = res[0];
@@ -98,7 +97,6 @@ export class AnimalController {
      */
     async getAnimalByName(name:string): Promise<AnimalModel | null> {
 
-        //récupération de l'utilisateur
         const res = await this.connection.query(`SELECT animal_id, animal_name, animal_age, species_id, space_id 
                                                     FROM ANIMAL where animal_name = ${name}`);
         const data = res[0];
