@@ -29,7 +29,7 @@ export class SpaceTypeController {
         if (Array.isArray(data)) {
             return (data as RowDataPacket[]).map(function (row: any) {
                 return new SpaceTypeModel({
-                    idSpaceType: Number.parseInt(row["space_type_id"]),
+                    spaceTypeId: Number.parseInt(row["space_type_id"]),
                     libelle: row["space_type_libelle"],
                 });
             });
@@ -74,7 +74,7 @@ export class SpaceTypeController {
             if (rows.length > 0) {
                 const row = rows[0];
                 return new SpaceTypeModel({
-                    idSpaceType: Number.parseInt(row["space_type_id"]),
+                    spaceTypeId: Number.parseInt(row["space_type_id"]),
                     libelle: row["space_type_libelle"],
                 });
             }
@@ -97,7 +97,7 @@ export class SpaceTypeController {
             if (rows.length > 0) {
                 const row = rows[0];
                 return new SpaceTypeModel({
-                    idSpaceType: Number.parseInt(row["space_type_id"]),
+                    spaceTypeId: Number.parseInt(row["space_type_id"]),
                     libelle: row["space_type_libelle"],
                 });
             }
@@ -128,19 +128,16 @@ export class SpaceTypeController {
         const setClause: string[] = [];
         const params = [];
         //création des contenus de la requête dynamiquement
-        if (options.idSpaceType !== undefined) {
-            setClause.push("space_type_id = ?");
-            params.push(options.idSpaceType);
-        }
         if (options.libelle !== undefined) {
             setClause.push("space_type_libelle = ?");
             params.push(options.libelle);
         }
+        params.push(options.spaceTypeId);
         try {
-            const res = await this.connection.execute(`UPDATE SPACE_TYPE SET ${setClause.join(", ")}`, params);
+            const res = await this.connection.execute(`UPDATE SPACE_TYPE SET ${setClause.join(", ")} WHERE space_type_id = ?`, params);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
-                return this.getSpaceTypeById(options.idSpaceType);
+                return this.getSpaceTypeById(options.spaceTypeId);
             }
             return null;
         } catch (err) {
@@ -156,12 +153,12 @@ export class SpaceTypeController {
     async createSpaceType(options: ISpaceTypeProps): Promise<SpaceTypeModel | null> {
         try {
             const res = await this.connection.execute("INSERT INTO SPACE_TYPE (space_type_id,space_type_libelle) VALUES (?,?)", [
-                options.idSpaceType,
+                options.spaceTypeId,
                 options.libelle
             ]);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
-                return this.getSpaceTypeById(options.idSpaceType);
+                return this.getSpaceTypeById(options.spaceTypeId);
             }
             return null;
         } catch (err) {
