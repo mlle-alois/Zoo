@@ -1,7 +1,6 @@
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {UserController} from "./user-controller";
-import {UserModel} from "../models/user-model";
-import {SessionModel} from "../models/session-model";
+import {SessionModel} from "../models";
 
 export class SessionController {
 

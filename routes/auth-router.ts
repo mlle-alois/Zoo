@@ -1,10 +1,9 @@
 import express from "express";
 import {DatabaseUtils} from "../database/database";
-import {authMiddleWare} from "../middlewares/auth-middleware";
+import {authUserMiddleWare} from "../middlewares/auth-middleware";
 import {AuthController} from "../controllers";
 import {UserController} from "../controllers";
-import {SessionController} from "../controllers/session-controller";
-import {SessionModel} from "../models/session-model";
+import {SessionController} from "../controllers";
 
 const authRouter = express.Router();
 
@@ -12,6 +11,8 @@ const authRouter = express.Router();
  * inscription d'un utilisateur
  * URL : auth/subscribe
  * Requete : POST
+ * ACCES : Tous
+ * Nécessite d'être connecté : NON
  */
 authRouter.post("/subscribe", async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
@@ -57,6 +58,8 @@ authRouter.post("/subscribe", async function (req, res) {
  * connexion d'un utilisateur
  * URL : auth/login
  * Requete : POST
+ * ACCES : Tous
+ * Nécessite d'être connecté : NON
  */
 authRouter.post("/login", async function (req, res) {
     const mail = req.body.mail;
@@ -81,9 +84,11 @@ authRouter.post("/login", async function (req, res) {
  * déconnexion d'un utilisateur
  * URL : auth/logout?token=$2b$05$eiTDmmFGXYluk1RBXOKAD.r1GD8jT4naaeO5dL8D9ea/Jg//dVt6a
  * Requete : DELETE
+ * ACCES : Tous
+ * Nécessite d'être connecté : OUI
  */
 //2e param -> authMiddleWare : vérifier que l'utilisateur est connecté pour le déconnecter
-authRouter.delete("/logout", authMiddleWare, async function (req, res) {
+authRouter.delete("/logout", authUserMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const sessionController = new SessionController(connection);
     const token = req.query.token ? req.query.token as string : "";

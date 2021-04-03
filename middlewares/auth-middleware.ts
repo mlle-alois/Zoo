@@ -1,6 +1,7 @@
 import express from "express";
 import {DatabaseUtils} from "../database/database";
-import {SessionController} from "../controllers/session-controller";
+import {SessionController} from "../controllers";
+import {getAuthorizedToken} from "../acces/give-access";
 
 /**
  * vérification qu'un utilisateur est connecté
@@ -9,11 +10,9 @@ import {SessionController} from "../controllers/session-controller";
  * @param res
  * @param next
  */
-export async function authMiddleWare(req: express.Request, res: express.Response, next: express.NextFunction) {
-    const auth = req.headers['authorization'];
-    if(auth !== undefined) {
-        //récupération du token autorisé
-        const token = auth.slice(7);
+export async function authUserMiddleWare(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const token = getAuthorizedToken(req);
+    if(token !== "") {
         const connection = await DatabaseUtils.getConnection();
         const sessionController = new SessionController(connection);
         const session = await sessionController.getSessionByToken(token);

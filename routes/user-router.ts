@@ -1,50 +1,65 @@
 import express from "express";
 import {UserController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
-import {authMiddleWare} from "../middlewares/auth-middleware";
+import {authUserMiddleWare} from "../middlewares/auth-middleware";
+import {isClientConnected, isConcernedUserOrAdmin} from "../acces/give-access";
 
-const router = express.Router();
+const userRouter = express.Router();
 
 /**
  * récupération de tous les utilisateurs
  * URL : zoo/user?limit={x}&offset={x}
  * Requete : GET
+ * ACCES : Tous sauf CLIENT
+ * Nécessite d'être connecté : OUI
  */
-router.get("/", authMiddleWare, async function (req, res) {
-    const connection = await DatabaseUtils.getConnection();
-    const userController = new UserController(connection);
-    const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : undefined;
-    const offset = req.query.offset ? Number.parseInt(req.query.offset as string) : undefined;
-    const userList = await userController.getAllUsers({
-        limit,
-        offset
-    });
-    res.json(userList);
+userRouter.get("/", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (await isClientConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const userController = new UserController(connection);
+        const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : undefined;
+        const offset = req.query.offset ? Number.parseInt(req.query.offset as string) : undefined;
+        const userList = await userController.getAllUsers({
+            limit,
+            offset
+        });
+        res.json(userList);
+    }
+    res.status(403).end();
 });
 
 /**
  * récupération d'un utilisateur selon son id
  * URL : zoo/user/:id
  * Requete : GET
+ * ACCES : Tous sauf CLIENT
+ * Nécessite d'être connecté : OUI
  */
-router.get("/:id", authMiddleWare, async function (req, res) {
-    const connection = await DatabaseUtils.getConnection();
-    const userController = new UserController(connection);
-    //récupération de l'utilisateur
-    const user = await userController.getUserById(Number.parseInt(req.params.id));
-    if (user === null) {
-        res.status(404).end();
-    } else {
-        res.json(user);
+userRouter.get("/:id", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (!await isClientConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const userController = new UserController(connection);
+        //récupération de l'utilisateur
+        const user = await userController.getUserById(Number.parseInt(req.params.id));
+        if (user === null) {
+            res.status(404).end();
+        } else {
+            res.json(user);
+        }
     }
+    res.status(403).end();
 });
 
 /**
  * modification d'un utilisateur selon son id
  * URL : zoo/user/:id
  * Requete : PUT
+ * ACCES : ADMIN ou utilisateur concerné
+ * Nécessite d'être connecté : OUI
  */
-router.put("/:id", authMiddleWare, async function (req, res) {
+userRouter.put("/:id", authUserMiddleWare, async function (req, res) {
     const userId = Number.parseInt(req.params.id);
     const mail = req.body.mail;
     const password = req.body.password;
@@ -59,41 +74,58 @@ router.put("/:id", authMiddleWare, async function (req, res) {
         res.status(400).end();
         return;
     }
-    const connection = await DatabaseUtils.getConnection();
-    const userController = new UserController(connection);
-    //modification
-    const user = await userController.updateUser({
-        userId,
-        mail,
-        password,
-        name,
-        firstname,
-        phoneNumber,
-        typeId
-    });
-    if (user === null) {
-        res.status(404);
-    } else {
-        res.json(user);
+    //vérification droits d'accès
+    if (await isConcernedUserOrAdmin(userId, req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const userController = new UserController(connection);
+        //modification
+        const user = await userController.updateUser({
+            userId,
+            mail,
+            password,
+            name,
+            firstname,
+            phoneNumber,
+            typeId
+        });
+        if (user === null) {
+            res.status(404).end();
+        } else {
+            res.json(user);
+        }
     }
+    res.status(403).end();
 });
 
 /**
  * suppression d'un utilisateur selon son id
  * URL : zoo/user/:id
  * Requete : DELETE
+ * ACCES : ADMIN ou utilisateur concerné
+ * Nécessite d'être connecté : OUI
  */
-router.delete("/:id", authMiddleWare, async function (req, res) {
-    const connection = await DatabaseUtils.getConnection();
-    const userController = new UserController(connection);
-    //suppression
-    const success = await userController.deleteUserById(Number.parseInt(req.params.id));
-    if (success) {
-        // pas de contenu mais a fonctionné
-        res.status(204).end();
-    } else {
-        res.status(404).end();
+userRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
+    const userId = Number.parseInt(req.params.id);
+    if (userId === undefined) {
+        res.status(400).end();
+        return;
+    }
+    //vérification droits d'accès
+    if (await isConcernedUserOrAdmin(userId, req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const userController = new UserController(connection);
+        //suppression
+        const success = await userController.deleteUserById(Number.parseInt(req.params.id));
+        if (success) {
+            // pas de contenu mais a fonctionné
+            res.status(204).end();
+        } else {
+            res.status(404).end();
+        }
+        res.status(403).end();
     }
 });
 
-export default router;
+export {
+    userRouter
+};
