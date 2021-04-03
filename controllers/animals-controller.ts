@@ -7,7 +7,6 @@ interface AnimalGetAllOptions {
     offset?: number;
 }
 
-// TODO décommenter les champs space une fois le CRUD space mit en place
 export class AnimalController {
 
     private connection: Connection;
@@ -34,7 +33,7 @@ export class AnimalController {
                     name: row["animal_name"],
                     age: row["animal_age"],
                     speciesId: Number.parseInt(row["species_id"]),
-                    // space: row["space_id"]
+                    spaceId: row["space_id"]
                 });
             });
         }
@@ -84,7 +83,7 @@ export class AnimalController {
                     name: row["animal_name"],
                     age: row["animal_age"],
                     speciesId: Number.parseInt(row["species_id"]),
-                    // space: row["space_id"]
+                    spaceId: row["space_id"]
                 });
             }
         }
@@ -109,7 +108,7 @@ export class AnimalController {
                     name: row["animal_name"],
                     age: row["animal_age"],
                     speciesId: Number.parseInt(row["species_id"]),
-                    // space: row["space_id"]
+                    spaceId: row["space_id"]
                 });
             }
         }
@@ -133,35 +132,29 @@ export class AnimalController {
 
     /**
      * Modification des informations d'un animal renseignées dans les options
-     * @param id
-     * @param name
-     * @param age
+     * @param options
      */
-    async updateAnimal(id: number, name: string, age: number): Promise<AnimalModel | null> {
+    async updateAnimal(options: IAnimalProps): Promise<AnimalModel | null> {
         const setClause: string[] = [];
         const params = [];
         //création des contenus de la requête dynamiquement
-        if (id !== undefined) {
-            setClause.push("animal_id = ?");
-            params.push(id);
-        }
-        if (name !== undefined) {
+        if (options.name !== undefined) {
             setClause.push("animal_name = ?");
-            params.push(name);
+            params.push(options.name);
         }
-        if (age !== undefined) {
+        if (options.age !== undefined) {
             setClause.push("animal_age = ?");
-            params.push(age);
+            params.push(options.age);
         }
-        // if (options.space !== undefined) {
-        //     setClause.push("space_id = ?");
-        //     params.push(options.space);
-        // }
+        if (options.spaceId !== undefined) {
+            setClause.push("space_id = ?");
+            params.push(options.spaceId);
+        }
         try {
-            const res = await this.connection.execute(`UPDATE ANIMAL SET ${setClause.join(", ")}`, params);
+            const res = await this.connection.execute(`UPDATE ANIMAL SET ${setClause.join(", ")} WHERE animal_id = ${options.id}`, params);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
-                return this.getAnimalById(id);
+                return this.getAnimalById(options.id);
             }
             return null;
         } catch (err) {
@@ -170,6 +163,10 @@ export class AnimalController {
         }
     }
 
+    /**
+     * Création d'un animal
+     * @param options
+     */
     async createAnimal(options: IAnimalProps): Promise<AnimalModel | null> {
         try {
             const res = await this.connection.execute(
@@ -179,7 +176,7 @@ export class AnimalController {
                     options.name,
                     options.age,
                     options.speciesId,
-                    // options.space
+                    options.spaceId
                 ]);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
