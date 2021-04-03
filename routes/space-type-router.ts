@@ -73,7 +73,7 @@ spaceTypeRouter.put("/:id", authUserMiddleWare, async function (req, res) {
         const spaceTypeController = new SpaceTypeController(connection);
         //modification
         const spaceType = await spaceTypeController.updateSpaceType({
-            idSpaceType: spaceTypeId,
+            spaceTypeId: spaceTypeId,
             libelle: libelle,
         });
         if (spaceType === null) {
@@ -121,7 +121,7 @@ spaceTypeRouter.post("/add", authUserMiddleWare, async function (req, res) {
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const spaceTypeController = new SpaceTypeController(connection);
-        const idSpaceType = await spaceTypeController.getMaxSpaceTypeId() + 1;
+        const spaceTypeId = await spaceTypeController.getMaxSpaceTypeId() + 1;
         const libelle = req.body.libelle;
         //toutes les informations sont obligatoires
         if (libelle === undefined) {
@@ -130,7 +130,7 @@ spaceTypeRouter.post("/add", authUserMiddleWare, async function (req, res) {
         }
         //Ajout d'un type d'espace
         const spaceType = await spaceTypeController.createSpaceType({
-            idSpaceType,
+            spaceTypeId,
             libelle
         })
 

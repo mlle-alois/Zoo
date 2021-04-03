@@ -1,14 +1,14 @@
 export interface ISpaceTypeProps {
-    idSpaceType?: number,
+    spaceTypeId?: number,
     libelle?: string
 }
 
 export class SpaceTypeModel implements  ISpaceTypeProps{
-    idSpaceType?: number
+    spaceTypeId?: number
     libelle?: string
 
     constructor(props: ISpaceTypeProps) {
-        this.idSpaceType = props?.idSpaceType;
+        this.spaceTypeId = props?.spaceTypeId;
         this.libelle = props?.libelle;
     }
 }
