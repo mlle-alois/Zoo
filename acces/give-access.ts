@@ -16,6 +16,11 @@ export function getAuthorizedToken(req: express.Request): string {
     return "";
 }
 
+/**
+ * Le token renseigné correspond à l'utilisateur concerné par la modification ou à un ADMIN
+ * @param userId
+ * @param req
+ */
 export async function isConcernedUserOrAdmin(userId: number, req: express.Request): Promise<boolean> {
     const token = getAuthorizedToken(req);
     if (token !== "") {
@@ -38,6 +43,10 @@ export async function isConcernedUserOrAdmin(userId: number, req: express.Reques
     return false;
 }
 
+/**
+ * Le token renseigné correspond à un CLIENT
+ * @param req
+ */
 export async function isClientConnected(req: express.Request): Promise<boolean> {
     const token = getAuthorizedToken(req);
     if (token !== "") {
@@ -49,6 +58,29 @@ export async function isClientConnected(req: express.Request): Promise<boolean> 
             if (session.userId != null) {
                 const user = await userController.getUserById(session.userId);
                 if (user?.typeId === CLIENT_USER_TYPE_ID) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Le token renseigné correspond à un ADMIN
+ * @param req
+ */
+export async function isAdminConnected(req: express.Request): Promise<boolean> {
+    const token = getAuthorizedToken(req);
+    if (token !== "") {
+        const connection = await DatabaseUtils.getConnection();
+        const sessionController = new SessionController(connection);
+        const userController = new UserController(connection);
+        const session = await sessionController.getSessionByToken(token);
+        if (session !== null) {
+            if (session.userId != null) {
+                const user = await userController.getUserById(session.userId);
+                if (user?.typeId === ADMIN_USER_TYPE_ID) {
                     return true;
                 }
             }
