@@ -93,7 +93,7 @@ export class SpeciesController {
 
         //récupération de l'espèce
         const res = await this.connection.query(`SELECT species_id, species_name 
-                                                    FROM SPECIES where species_name = ${name}`);
+                                                    FROM SPECIES where species_name = "${name}"`);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];

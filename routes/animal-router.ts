@@ -81,6 +81,10 @@ animalRouter.put("/:id",authUserMiddleWare, async function (req, res) {
             age: age,
             spaceId: spaceId
         });
+        if (typeof animal === "string") {
+            res.status(403).end(animal);
+            return;
+        }
         if (animal === null) {
             res.status(404);
         } else {
@@ -135,6 +139,7 @@ animalRouter.post("/add", authUserMiddleWare,async function (req, res) {
         const speciesId = species?.id;
         const spaceId = Number.parseInt(req.body.space);
         //toutes les informations sont obligatoires
+
         if ( name === undefined ) {
             res.status(400).end();
             return;
@@ -148,6 +153,10 @@ animalRouter.post("/add", authUserMiddleWare,async function (req, res) {
                 speciesId,
                 spaceId
             });
+            if (typeof animal === "string") {
+                res.status(403).end(animal);
+                return;
+            }
             if (animal !== null) {
                 res.status(201);
                 res.json(animal);
