@@ -90,7 +90,7 @@ export class PresenceController {
     }
 
     /**
-     * Récupération d'une présence via :
+     * Récupération de toutes les presences  via :
      * @param UserId
      */
     async getPresenceByUser(UserId: number): Promise<PresenceModel[] | null> {
@@ -167,24 +167,21 @@ export class PresenceController {
         }
     }
 
-    private getCurrentTimeStamp() {
+/*    private getCurrentTimeStamp() {
         // Prends la date à la valeur actuelle, dans la bonne tiemzone
         var date = new Date();
         return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
-    }
+    }*/
 
 
     /**
-     * création d'une présence
+     * création d'une présence en vérifiant si c'est possible
      * @param options
+     *
      */
     async createPresence(options: IPresenceProps): Promise<PresenceModel | null | string> {
         try {
 
-            /*  const isEnded = await this.CheckIfLastPresenceIsEnded(options);
-              if (!isEnded) {
-                  return "You need to end the last presence first before creating a new one !";
-              }*/
             const isTimeScheduleValid = await this.isPresenceValid(options);
             if (!isTimeScheduleValid) {
                 return "You already have something scedule during this time";
@@ -208,7 +205,11 @@ export class PresenceController {
         }
 
     }
-
+    /**
+     * Renvoie une string indiquant s"il y a assez de personnes disponibles pour l'ouverture du zoo
+     * @param options
+     *
+     */
     async isZooCouldBeOpen(options: Timelimit): Promise<boolean | null> {
         // selectionne les utilisateurs présents dans la tranche horaires
         const res = await this.connection.query(`SELECT user_id 
@@ -241,7 +242,7 @@ export class PresenceController {
                         const veterinary = validStaffs.find(staff => staff === VETERINARY_ID);
                         const cleaningAgent = validStaffs.find(staff => staff === CLEANING_AGENT_ID);
                         const salesPerson = validStaffs.find(staff => staff === SALESPERSON_ID);
-
+                        
                         return !!(receptionist && veterinary && cleaningAgent && salesPerson);
 
                     }

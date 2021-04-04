@@ -83,13 +83,13 @@ presenceRouter.get("/user/:id", authUserMiddleWare, async function (req, res) {
 presenceRouter.put("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
-        const PresenceId = Number.parseInt(req.params.id);
-        const PresenceStart = req.body.dateStart;
-        const PresenceEnd = req.body.dateEnd;
-        const PresenceUser = req.body.user_id;
+        const presenceId = Number.parseInt(req.params.id);
+        const presenceStart = req.body.dateStart;
+        const presenceEnd = req.body.dateEnd;
+        const presenceUser = req.body.user_id;
 
         //invalide s'il n'y a pas d'id ou qu'aucune option à modifier n'est renseignée
-        if (PresenceId === undefined || (PresenceUser === undefined || PresenceStart === undefined || PresenceEnd === undefined)) {
+        if (presenceId === undefined || (presenceUser === undefined || presenceStart === undefined || presenceEnd === undefined)) {
             res.status(400).end("Remplir tous les champs suivants : dateStart ; dateEnd ; user_id");
             return;
 
@@ -98,10 +98,10 @@ presenceRouter.put("/:id", authUserMiddleWare, async function (req, res) {
         const presenceController = new PresenceController(connection);
         //modification
         const PresenceType = await presenceController.updatePresence({
-            presenceId: PresenceId,
-            dateHourStart: PresenceStart,
-            dateHourEnd: PresenceEnd,
-            userId: PresenceUser
+            presenceId: presenceId,
+            dateHourStart: presenceStart,
+            dateHourEnd: presenceEnd,
+            userId: presenceUser
         });
         if (PresenceType === null) {
             res.status(404);
@@ -149,22 +149,22 @@ presenceRouter.post("/add", authUserMiddleWare, async function (req, res) {
         const connection = await DatabaseUtils.getConnection();
         const presenceController = new PresenceController(connection);
 
-        const PresenceId = await presenceController.getMaxPresenceId() + 1;
-        const PresenceStart = req.body.dateStart;
-        const PresenceEnd = req.body.dateEnd;
-        const PresenceUser = req.body.user_id;
+        const presenceId = await presenceController.getMaxPresenceId() + 1;
+        const presenceStart = req.body.dateStart;
+        const presenceEnd = req.body.dateEnd;
+        const presenceUser = req.body.user_id;
 
         //toutes les informations sont obligatoires
-        if (PresenceId === undefined || (PresenceUser === undefined || PresenceStart === undefined || PresenceEnd === undefined)) {
+        if (presenceId === undefined || (presenceUser === undefined || presenceStart === undefined || presenceEnd === undefined)) {
             res.status(400).end("Remplir tous les champs suivants : dateStart ; dateEnd ; user_id");
             return;
 
         }
         const PresenceType = await presenceController.createPresence({
-            presenceId: PresenceId,
-            dateHourStart: PresenceStart,
-            dateHourEnd: PresenceEnd,
-            userId: PresenceUser
+            presenceId: presenceId,
+            dateHourStart: presenceStart,
+            dateHourEnd: presenceEnd,
+            userId: presenceUser
         })
         if (typeof PresenceType === "string") {
             res.status(401).end(PresenceType);
@@ -189,19 +189,19 @@ presenceRouter.post("/open", authUserMiddleWare, async function (req, res) {
         const connection = await DatabaseUtils.getConnection();
         const presenceController = new PresenceController(connection);
 
-        const PresenceStart = req.body.dateStart;
-        const PresenceEnd = req.body.dateEnd;
+        const presenceStart = req.body.dateStart;
+        const presenceEnd = req.body.dateEnd;
 
         //toutes les informations sont obligatoires
-        if (PresenceStart === undefined || PresenceEnd === undefined) {
+        if (presenceStart === undefined || presenceEnd === undefined) {
             res.status(400).end("Remplir tous les champs suivants : dateStart ; dateEnd ");
             return;
 
         }
         try {
             const isZooOpen = await presenceController.isZooCouldBeOpen({
-                dateStart: PresenceStart,
-                dateEnd: PresenceEnd,
+                dateStart: presenceStart,
+                dateEnd: presenceEnd,
             })
             if (isZooOpen) {
                 res.status(201);
