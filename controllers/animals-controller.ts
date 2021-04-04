@@ -134,7 +134,7 @@ export class AnimalController {
      * Modification des informations d'un animal renseignées dans les options
      * @param options
      */
-    async updateAnimal(options: IAnimalProps): Promise<AnimalModel | null> {
+    async updateAnimal(options: IAnimalProps): Promise<AnimalModel | null | string> {
         const setClause: string[] = [];
         const params = [];
         //création des contenus de la requête dynamiquement
@@ -151,6 +151,10 @@ export class AnimalController {
             params.push(options.spaceId);
         }
         try {
+           if(!await this.isEnoughSpaceToAddTheAnimal(options)){
+               return "Cette espace est déjà plein";
+           }
+
             const res = await this.connection.execute(`UPDATE ANIMAL SET ${setClause.join(", ")} WHERE animal_id = ${options.id}`, params);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
@@ -162,13 +166,37 @@ export class AnimalController {
             return null;
         }
     }
+    /**
+     * Check s'il y a assez de place dans l'espace cible avant d'ajouter l'animal
+     * @param options
+     */
+    private async isEnoughSpaceToAddTheAnimal(options: IAnimalProps):Promise<boolean> {
+        // Sélectionne le nombre d'animal total dans l'espace
+        const resAllAnimalInGivenSpace = await this.connection.query(`SELECT COUNT(*)
+                                                    FROM ANIMAL where space_id = ${options.spaceId}`);
+        const resAnimals = resAllAnimalInGivenSpace[0] as RowDataPacket[];
+        const rowAnimals = resAnimals[0];
+       const numberOfAnimalInSpace = rowAnimals["COUNT(*)"];
+
+        // Verifie si l'espace à la capacité d'acceuilir un autre animal
+        const resIsEnoughSpace = await this.connection.query(`SELECT space_capacity
+                                                    FROM SPACE where space_id = ${options.spaceId} AND space_capacity > ${numberOfAnimalInSpace}`);
+        const isEnoughSpace = resIsEnoughSpace[0] as RowDataPacket[];
+
+        return isEnoughSpace.length > 0;
+
+    }
 
     /**
      * Création d'un animal
      * @param options
      */
-    async createAnimal(options: IAnimalProps): Promise<AnimalModel | null> {
+    async createAnimal(options: IAnimalProps): Promise<AnimalModel | null | string> {
         try {
+            if(!await this.isEnoughSpaceToAddTheAnimal(options)){
+                return "Cette espace est déjà plein";
+            }
+
             const res = await this.connection.execute(
                 "INSERT INTO ANIMAL (animal_id, animal_name, animal_age, species_id, space_id) VALUES (?,?,?,?,?)",
                 [
