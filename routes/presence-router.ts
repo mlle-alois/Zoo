@@ -89,7 +89,7 @@ presenceRouter.put("/:id", authUserMiddleWare, async function (req, res) {
         const PresenceUser = req.body.user_id;
 
         //invalide s'il n'y a pas d'id ou qu'aucune option à modifier n'est renseignée
-        if (PresenceId === undefined || (PresenceUser === undefined || PresenceStart === undefined || PresenceEnd === undefined) ){
+        if (PresenceId === undefined || (PresenceUser === undefined || PresenceStart === undefined || PresenceEnd === undefined)) {
             res.status(400).end("Remplir tous les champs suivants : dateStart ; dateEnd ; user_id");
             return;
 
@@ -155,7 +155,7 @@ presenceRouter.post("/add", authUserMiddleWare, async function (req, res) {
         const PresenceUser = req.body.user_id;
 
         //toutes les informations sont obligatoires
-        if (PresenceId === undefined || (PresenceUser === undefined || PresenceStart === undefined || PresenceEnd === undefined) ){
+        if (PresenceId === undefined || (PresenceUser === undefined || PresenceStart === undefined || PresenceEnd === undefined)) {
             res.status(400).end("Remplir tous les champs suivants : dateStart ; dateEnd ; user_id");
             return;
 
@@ -166,7 +166,7 @@ presenceRouter.post("/add", authUserMiddleWare, async function (req, res) {
             dateHourEnd: PresenceEnd,
             userId: PresenceUser
         })
-        if ( typeof PresenceType === "string") {
+        if (typeof PresenceType === "string") {
             res.status(401).end(PresenceType);
             return;
         }
@@ -192,10 +192,9 @@ presenceRouter.post("/open", authUserMiddleWare, async function (req, res) {
         const PresenceStart = req.body.dateStart;
         const PresenceEnd = req.body.dateEnd;
 
-
         //toutes les informations sont obligatoires
         if (PresenceStart === undefined || PresenceEnd === undefined) {
-            res.status(400).end("Remplir tous les champs suivants : dateStart ; dateEnd ; user_id");
+            res.status(400).end("Remplir tous les champs suivants : dateStart ; dateEnd ");
             return;
 
         }
@@ -212,15 +211,12 @@ presenceRouter.post("/open", authUserMiddleWare, async function (req, res) {
             }
 
             res.status(403).end();
-        }
-
-               catch (err) {
+        } catch (err) {
             console.log(err);
             res.status(403).end();
         }
     }
 });
-
 
 
 export {presenceRouter};

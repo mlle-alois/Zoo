@@ -224,6 +224,7 @@ export class PresenceController {
                 const users = rows.map(function (el) {
                     return el["user_id"];
                 });
+            // Selectionne tous les user_type des users présents dans la tranche horaire
                 const resValidStaff = await this.connection.query('SELECT user_type_id FROM USER where user_id IN (?)', [users]);
                 const validStaff = resValidStaff[0];
 
@@ -235,6 +236,7 @@ export class PresenceController {
                         const validStaffs = rows.map(function (el) {
                             return el["user_type_id"];
                         });
+                        // Vérrifie s'il y a au moins un staff de chaque dans la selection, puis return true ou false
                         const receptionist = validStaffs.find(staff => staff === RECEPTIONIST_ID);
                         const veterinary = validStaffs.find(staff => staff === VETERINARY_ID);
                         const cleaningAgent = validStaffs.find(staff => staff === CLEANING_AGENT_ID);
