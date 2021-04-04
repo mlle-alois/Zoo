@@ -151,7 +151,7 @@ spaceRouter.post("/add", authUserMiddleWare, async function (req, res) {
             res.status(400).end();
             return;
         }
-        const spaceType = await spaceController.createSpace({
+        const space = await spaceController.createSpace({
             spaceId,
             spaceName,
             spaceDescription,
@@ -162,9 +162,9 @@ spaceRouter.post("/add", authUserMiddleWare, async function (req, res) {
             spaceTypeId
         })
 
-        if (spaceType !== null) {
+        if (space !== null) {
             res.status(201);
-            res.json(spaceType);
+            res.json(space);
         } else {
             res.status(400).end();
         }
