@@ -189,7 +189,7 @@ export class PassController {
     }
 
     /**
-     * création d'un pass
+     * création d'un accès à un espace pour un billet
      * @param options
      */
     async createAccessForPassAtSpace(options: IAccessPassSpaceModelProps): Promise<AccessPassSpaceModel | null> {
@@ -230,6 +230,32 @@ export class PassController {
             }
         }
         return false;
+    }
+
+    /**
+     * Vrai si le billet existe
+     * @param passId
+     */
+    async doesPassExist(passId: number) {
+        const isTreatmentValid = await this.connection.query(`SELECT pass_id FROM PASS WHERE pass_id = ${passId}`);
+        const result = isTreatmentValid[0] as RowDataPacket[];
+        return result.length > 0;
+    }
+
+    /**
+     * création d'un accès à un espace pour un billet
+     * @param passId
+     * @param spaceId
+     */
+    async removeAccessForPassAtSpace(passId: number, spaceId: number): Promise<boolean> {
+        try {
+            const res = await this.connection.query(`DELETE FROM GIVE_ACCESS_PASS_SPACE where pass_id = ${passId} and space_id = ${spaceId}`);
+            const headers = res[0] as ResultSetHeader;
+            return headers.affectedRows === 1;
+        } catch (err) {
+            console.error(err);
+            return false;
+        }
     }
 
 }
