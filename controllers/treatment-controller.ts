@@ -20,14 +20,14 @@ export class TreatmentController {
     }
 
     /**
-     * Récupération de toutes les présences
+     * Récupération de tous les traitements
      * @param options -> Limit et offset de la requete
      */
     async getAllTreatment(options?: TreatmentGetAllOptions): Promise<TreatmentModel[]> {
         //récupération des options
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
-        //récupération des présences
+        //récupération des traitements
         const res = await this.connection.query(`SELECT treatment_id, treatment_date, treatment_observation,animal_id,treatment_type_id, veterinary_id
                                                     FROM TREATMENT LIMIT ${offset}, ${limit}`);
         const data = res[0];
@@ -47,7 +47,7 @@ export class TreatmentController {
     }
 
     /**
-     * Récupération de l'id de l'présence maximum existant
+     * Récupération de l'id du traitement maximum existant
      * Utile pour l'incrémentation manuelle
      */
     async getMaxTreatmentId(): Promise<number> {
@@ -94,6 +94,7 @@ export class TreatmentController {
         }
         return null;
     }
+
     /**
      * Récupération d'une liste de traitements d'un animal via :
      * @param animalId
@@ -121,7 +122,7 @@ export class TreatmentController {
     }
 
     /**
-     * Récupération de toutes les Treatments d'un veto via :
+     * Récupération de toutes les traitements d'un veto via :
      * @param VeterinaryId
      */
     async getTreatmentByVeterinary(VeterinaryId: number): Promise<TreatmentModel[] | null> {
@@ -161,11 +162,10 @@ export class TreatmentController {
     }
 
     /**
-     * Modification des informations d'une présence renseignées dans les options
+     * Modification des informations d'un traitement renseignées dans les options
      * @param options
      */
     async updateTreatment(options: ITreatmentProps): Promise<TreatmentModel | null | string> {
-
 
         const setClause: string[] = [];
         const params = [];
@@ -261,6 +261,7 @@ export class TreatmentController {
         const result = isTreatmentValid[0] as RowDataPacket[];
         return result.length > 0;
     }
+
     /**
      * Vrai si le type de traitement existe
      * @param treatmentTypeId
@@ -271,6 +272,7 @@ export class TreatmentController {
         const result = isTreatmentValid[0] as RowDataPacket[];
         return result.length > 0;
     }
+
     /**
      * Vrai si le veterinaire existe
      * @param veterinaryId
