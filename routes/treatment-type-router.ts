@@ -7,7 +7,7 @@ import {isClientConnected} from "../acces/give-access";
 const treatmentTypeRouter = express.Router();
 
 /**
- * récupération de tous les types d'espaces
+ * récupération de tous les types de traitements
  * URL : /zoo/space-type?limit={x}&offset={x}
  * Requete : GET
  * ACCES : Tous sauf CLIENT
@@ -30,7 +30,7 @@ treatmentTypeRouter.get("/", authUserMiddleWare, async function (req, res) {
 });
 
 /**
- * récupération d'un type d'espace selon son id
+ * récupération d'un type de traitement selon son id
  * URL : /zoo/space-type/:id
  * Requete : GET
  * ACCES : Tous sauf CLIENT
@@ -52,7 +52,7 @@ treatmentTypeRouter.get("/:id", authUserMiddleWare, async function (req, res) {
 });
 
 /**
- * modification d'un type d'espace selon son id
+ * modification d'un type de traitement selon son id
  * URL : /zoo/space-type/:id
  * Requete : PUT
  * ACCES : Tous sauf CLIENT
@@ -86,7 +86,7 @@ treatmentTypeRouter.put("/:id", authUserMiddleWare, async function (req, res) {
 });
 
 /**
- * suppression d'un type d'espace selon son id
+ * suppression d'un type de traitement selon son id
  * URL : /zoo/space-type/:id
  * Requete : DELETE
  * ACCES : Tous sauf CLIENT
@@ -110,7 +110,7 @@ treatmentTypeRouter.delete("/:id", authUserMiddleWare, async function (req, res)
 });
 
 /**
- * ajout d'un type d'espace
+ * ajout d'un type de traitement
  * URL : /zoo/space-type/add
  * Requete : POST
  * ACCES : Tous sauf CLIENT
@@ -128,7 +128,7 @@ treatmentTypeRouter.post("/add", authUserMiddleWare, async function (req, res) {
             res.status(400).end();
             return;
         }
-        //Ajout d'un type d'espace
+        //Ajout d'un type de traitement
         const treatmentType = await treatmentTypeController.createTreatmentType({
             treatment_type_id: treatmentTypeId,
             treatment_type_libelle: libelle

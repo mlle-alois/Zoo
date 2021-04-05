@@ -1,8 +1,9 @@
-// @ts-ignore
-import {ITreatmentProps, TreatmentModel, Timelimit} from "../models";
+import {ITreatmentProps, TreatmentModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
-import { VETERINARY_ID} from "../consts";
 import {DateHelp} from "../Utils";
+import {AnimalController} from "./animals-controller"
+import {TreatmentTypeController} from "./treatment-type-controller";
+import {UserController} from "./user-controller";
 
 
 interface TreatmentGetAllOptions {
@@ -82,7 +83,7 @@ export class TreatmentController {
             const rows = data as RowDataPacket[];
             if (rows.length > 0) {
                 const row = rows[0];
-                return new TreatmentModel( {
+                return new TreatmentModel({
                     treatment_id: Number.parseInt(row["treatment_id"]),
                     treatment_date: row["treatment_date"],
                     treatment_observation: row["treatment_observation"],
@@ -94,6 +95,7 @@ export class TreatmentController {
         }
         return null;
     }
+
     /**
      * Récupération d'une liste de traitements d'un animal via :
      * @param animalId
@@ -174,8 +176,7 @@ export class TreatmentController {
         if (options.treatment_date !== undefined) {
             setClause.push("treatment_date = ?");
             params.push(options.treatment_date);
-        }
-        else {
+        } else {
             setClause.push("treatment_date = ?");
             params.push(DateHelp.getCurrentTimeStamp());
         }
@@ -183,20 +184,20 @@ export class TreatmentController {
             setClause.push("treatment_observation = ?");
             params.push(options.treatment_observation);
         }
-        if (options.animal_id  !== undefined) {
-            if(!await this.doesAnimalExist(options.animal_id))
+        if (options.animal_id !== undefined) {
+            if (!await AnimalController.doesAnimalExist(options.animal_id, this.connection))
                 return "The animal doesn't exist";
             setClause.push("animal_id = ?");
             params.push(options.animal_id);
         }
         if (options.treatment_type_id !== undefined) {
-            if(! await this.doesTreatmentTypeExist(options.treatment_type_id))
+            if (!await TreatmentTypeController.doesTreatmentTypeExist(options.treatment_type_id, this.connection))
                 return "The treatment type doesn't exist";
             setClause.push("treatment_type_id = ?");
             params.push(options.treatment_type_id);
         }
         if (options.veterinary_id !== undefined) {
-            if(! await this.doesVeterinaryExist(options.veterinary_id))
+            if (!await UserController.doesVeterinaryExist(options.veterinary_id, this.connection))
                 return "The veterinary doesn't exist";
             setClause.push("veterinary_id = ?");
             params.push(options.veterinary_id);
@@ -216,7 +217,6 @@ export class TreatmentController {
     }
 
 
-
     /**
      * création d'un traitement en vérifiant si c'est possible
      * @param options
@@ -224,11 +224,11 @@ export class TreatmentController {
      */
     async createTreatment(options: ITreatmentProps): Promise<TreatmentModel | null | string> {
         try {
-            if(! await this.doesVeterinaryExist(options.veterinary_id))
+            if (!await UserController.doesVeterinaryExist(options.veterinary_id, this.connection))
                 return "The veterinary doesn't exist";
-            if(!await this.doesAnimalExist(options.animal_id))
+            if (!await AnimalController.doesAnimalExist(options.animal_id, this.connection))
                 return "The animal doesn't exist";
-            if(! await this.doesTreatmentTypeExist(options.treatment_type_id))
+            if (!await TreatmentTypeController.doesTreatmentTypeExist(options.treatment_type_id, this.connection))
                 return "The treatment type doesn't exist";
 
             const res = await this.connection.execute("INSERT INTO TREATMENT (treatment_id, treatment_date, treatment_observation,animal_id,treatment_type_id, veterinary_id) VALUES (?,?,?,?,?,?)", [
@@ -251,35 +251,5 @@ export class TreatmentController {
 
     }
 
-    /**
-     * Vrai s'il l'animal existe
-     * @param id_animal
-     */
-   private async doesAnimalExist(id_animal: number | undefined) {
-        const isTreatmentValid = await this.connection.query(`SELECT animal_id
-    FROM ANIMAL WHERE animal_id = ${id_animal}`);
-        const result = isTreatmentValid[0] as RowDataPacket[];
-        return result.length > 0;
-    }
-    /**
-     * Vrai si le type de traitement existe
-     * @param treatmentTypeId
-     */
-    private async doesTreatmentTypeExist(treatmentTypeId: number | undefined) {
-        const isTreatmentValid = await this.connection.query(`SELECT treatment_type_id
-    FROM TREATMENT_TYPE WHERE treatment_type_id = ${treatmentTypeId}`);
-        const result = isTreatmentValid[0] as RowDataPacket[];
-        return result.length > 0;
-    }
-    /**
-     * Vrai si le veterinaire existe
-     * @param veterinaryId
-     */
-    private async doesVeterinaryExist(veterinaryId: number | undefined) {
-        const isTreatmentValid = await this.connection.query(`SELECT user_id
-    FROM USER WHERE user_id = ${veterinaryId} AND user_type_id = ${VETERINARY_ID}`);
-        const result = isTreatmentValid[0] as RowDataPacket[];
-        return result.length > 0;
-    }
 
 }

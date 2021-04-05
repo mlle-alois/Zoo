@@ -132,8 +132,11 @@ export class PresenceController {
      * Modification des informations d'une présence renseignées dans les options
      * @param options
      */
-    async updatePresence(options: IPresenceProps): Promise<PresenceModel | null> {
-
+    async updatePresence(options: IPresenceProps): Promise<PresenceModel | null | string> {
+        const isTimeScheduleValid = await this.isPresenceValid(options);
+        if (!isTimeScheduleValid) {
+            return "You already have something scedule during this time";
+        }
 
         const setClause: string[] = [];
         const params = [];
@@ -167,12 +170,6 @@ export class PresenceController {
             return null;
         }
     }
-
-/*    private getCurrentTimeStamp() {
-        // Prends la date à la valeur actuelle, dans la bonne tiemzone
-        var date = new Date();
-        return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
-    }*/
 
 
     /**

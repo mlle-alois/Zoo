@@ -166,5 +166,17 @@ export class TreatmentTypeController {
             return null;
         }
     }
+    /**
+     * Vrai si le type de traitement existe
+     * @param treatmentTypeId
+     * @param connection
+     */
+    public static async doesTreatmentTypeExist(treatmentTypeId: number | undefined,connection: Connection) {
+        const isTreatmentValid = await connection.query(`SELECT treatment_type_id
+    FROM TREATMENT_TYPE WHERE treatment_type_id = ${treatmentTypeId}`);
+        const result = isTreatmentValid[0] as RowDataPacket[];
+        return result.length > 0;
+    }
+
 
 }
