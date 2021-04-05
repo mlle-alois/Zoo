@@ -3,6 +3,8 @@ import {PassController} from "../controllers/pass-controller";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
 import {isAdminConnected} from "../acces/give-access";
+import {INTEGER} from "sequelize";
+import {SpaceController} from "../controllers/space-controller";
 
 const passRouter = express.Router();
 
@@ -91,12 +93,12 @@ passRouter.put("/:id", authUserMiddleWare, async function (req, res) {
 
 /**
  * suppression d'un billet selon son id
- * URL : /zoo/pass/:id
+ * URL : /zoo/pass/delete/:id
  * Requete : DELETE
  * ACCES : ADMIN
  * Nécessite d'être connecté : OUI
  */
-passRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
+passRouter.delete("/delete/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (await isAdminConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
@@ -145,6 +147,114 @@ passRouter.post("/add", authUserMiddleWare, async function (req, res) {
         if (passType !== null) {
             res.status(201);
             res.json(passType);
+        } else {
+            res.status(400).end();
+        }
+    }
+    res.status(403).end();
+});
+
+/**
+ * donner à un billet l'accès à un espace
+ * URL : /zoo/pass/give-access?passId={x}&spaceId={x}[&order={x}]
+ * Requete : POST
+ * ACCES : ADMIN
+ * Nécessite d'être connecté : OUI
+ */
+passRouter.post("/give-access", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (await isAdminConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const passController = new PassController(connection);
+        const spaceController = new SpaceController(connection);
+
+        const passId = Number.parseInt(req.query.passId as string);
+        const spaceId = Number.parseInt(req.query.spaceId as string);
+        let numOrderAccess: number | undefined = Number.parseInt(req.query.order as string);
+        //informations obligatoires
+        if (passId === undefined || spaceId === undefined) {
+            res.status(400).end();
+            return;
+        }
+        //vérification que l'espace existe
+        if(!await spaceController.doesSpaceExist(spaceId)) {
+            res.send('L\'espace renseigné n\'existe pas');
+            res.status(409).end();
+            return;
+        }
+        //vérification que le billet existe
+        if(!await passController.doesPassExist(passId)) {
+            res.send('Le billet renseigné n\'existe pas');
+            res.status(409).end();
+            return;
+        }
+        //numéro d'ordre obligatoire si le billet est un escape game
+        const isEscapeGame = await passController.isEscapeGamePass(passId);
+        if (isEscapeGame) {
+            if (isNaN(numOrderAccess)) {
+                res.send('Un numéro d\'ordre doit être renseigné');
+                res.status(400).end();
+                return;
+            }
+        }
+        //si ce n'est pas un type escape game, on met l'ordre à undefined si jamais il est renseigné
+        else {
+            numOrderAccess = undefined;
+        }
+        //vérification si le billet a déjà accès à l'espace
+        const passAccess = await passController.getAccessByPassIdAndSpaceId(passId, spaceId);
+        if (passAccess !== null) {
+            res.send('L\'accès à cet espace est déjà possible pour ce billet');
+            res.status(409).end(); //conflit
+            return;
+        }
+        const passType = await passController.createAccessForPassAtSpace({
+            passId,
+            spaceId,
+            numOrderAccess
+        });
+
+        if (passType !== null) {
+            res.status(201);
+            res.json(passType);
+        } else {
+            res.status(400).end();
+        }
+    }
+    res.status(403).end();
+});
+
+/**
+ * retirer l'accès à un espace à un billet
+ * URL : /zoo/pass/remove-access?passId={x}&spaceId={x}
+ * Requete : DELETE
+ * ACCES : ADMIN
+ * Nécessite d'être connecté : OUI
+ */
+passRouter.delete("/remove-access", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (await isAdminConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const passController = new PassController(connection);
+
+        const passId = Number.parseInt(req.query.passId as string);
+        const spaceId = Number.parseInt(req.query.spaceId as string);
+        //informations obligatoires
+        if (passId === undefined || spaceId === undefined) {
+            res.status(400).end();
+            return;
+        }
+        //vérification si le billet a déjà accès à l'espace
+        const passAccess = await passController.getAccessByPassIdAndSpaceId(passId, spaceId);
+        if (passAccess === null) {
+            res.send('Le billet n\'a pas accès à l\'espace');
+            res.status(409).end(); //conflit
+            return;
+        }
+        const success = await passController.removeAccessForPassAtSpace(passId, spaceId);
+
+        if (success) {
+            res.status(201);
         } else {
             res.status(400).end();
         }

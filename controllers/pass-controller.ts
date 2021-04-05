@@ -1,5 +1,6 @@
 import {IPassProps, PassModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
+import {AccessPassSpaceModel, IAccessPassSpaceModelProps} from "../models/access-pass-space-model";
 
 interface PassGetAllOptions {
     limit?: number;
@@ -87,6 +88,35 @@ export class PassController {
     }
 
     /**
+     * Récupération d'un accès billet via :
+     * @param passId
+     * @param spaceId
+     */
+    async getAccessByPassIdAndSpaceId(passId: number | undefined, spaceId: number | undefined): Promise<AccessPassSpaceModel | null> {
+        if (passId === undefined || spaceId === undefined)
+            return null;
+
+        const res = await this.connection.query(`SELECT pass_id, space_id, num_order_access 
+                                                    FROM GIVE_ACCESS_PASS_SPACE WHERE pass_id = ? AND space_id = ?`, [
+            passId,
+            spaceId
+        ]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                return new AccessPassSpaceModel({
+                    passId: Number.parseInt(row["pass_id"]),
+                    spaceId: Number.parseInt(row["space_id"]),
+                    numOrderAccess: Number.parseInt(row["num_order_access"])
+                });
+            }
+        }
+        return null;
+    }
+
+    /**
      * Suppression d'un billet depuis son :
      * @param passId
      */
@@ -155,6 +185,76 @@ export class PassController {
         } catch (err) {
             console.error(err);
             return null;
+        }
+    }
+
+    /**
+     * création d'un accès à un espace pour un billet
+     * @param options
+     */
+    async createAccessForPassAtSpace(options: IAccessPassSpaceModelProps): Promise<AccessPassSpaceModel | null> {
+        const numOrderAccess = options.numOrderAccess === undefined ? null : options.numOrderAccess;
+        try {
+            const res = await this.connection.execute("INSERT INTO GIVE_ACCESS_PASS_SPACE (pass_id, space_id, num_order_access) VALUES (?, ?, ?)", [
+                options.passId,
+                options.spaceId,
+                numOrderAccess
+            ]);
+            const headers = res[0] as ResultSetHeader;
+            if (headers.affectedRows === 1) {
+                return this.getAccessByPassIdAndSpaceId(options.passId, options.spaceId);
+            }
+            return null;
+        } catch (err) {
+            console.error(err);
+            return null;
+        }
+    }
+
+    /**
+     * Savoir si un billet est escape game via son :
+     * @param passId
+     */
+    async isEscapeGamePass(passId: number): Promise<boolean> {
+        const res = await this.connection.query('SELECT COUNT(*) as isEscapeGame FROM PASS WHERE UPPER(pass_name) LIKE \'%ESCAPE%GAME%\' AND pass_id = ?', [passId]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                if (row["isEscapeGame"] === null) {
+                    return false;
+                } else {
+                    return (Number.parseInt(row["isEscapeGame"]) > 0);
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Vrai si le billet existe
+     * @param passId
+     */
+    async doesPassExist(passId: number) {
+        const isTreatmentValid = await this.connection.query(`SELECT pass_id FROM PASS WHERE pass_id = ${passId}`);
+        const result = isTreatmentValid[0] as RowDataPacket[];
+        return result.length > 0;
+    }
+
+    /**
+     * création d'un accès à un espace pour un billet
+     * @param passId
+     * @param spaceId
+     */
+    async removeAccessForPassAtSpace(passId: number, spaceId: number): Promise<boolean> {
+        try {
+            const res = await this.connection.query(`DELETE FROM GIVE_ACCESS_PASS_SPACE where pass_id = ${passId} and space_id = ${spaceId}`);
+            const headers = res[0] as ResultSetHeader;
+            return headers.affectedRows === 1;
+        } catch (err) {
+            console.error(err);
+            return false;
         }
     }
 

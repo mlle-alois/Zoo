@@ -212,7 +212,7 @@ presenceRouter.post("/open", authUserMiddleWare, async function (req, res) {
 
             res.status(403).end();
         } catch (err) {
-            console.log(err);
+            console.error(err);
             res.status(403).end();
         }
     }

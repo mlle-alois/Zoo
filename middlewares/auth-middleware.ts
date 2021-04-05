@@ -24,7 +24,7 @@ export async function authUserMiddleWare(req: express.Request, res: express.Resp
             res.status(403).end();
         }
     } else {
-        //pas d'user connecté
+        //authentification nécessaire à l'accès
         res.status(401).end();
     }
 }
