@@ -1,4 +1,4 @@
-export class DateHelp {
+export class DateUtils {
     public static getCurrentTimeStamp() {
         // Prends la date à la valeur actuelle, dans la bonne tiemzone
         var date = new Date();

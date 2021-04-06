@@ -1,6 +1,6 @@
 import {ITreatmentProps, TreatmentModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
-import {DateHelp} from "../Utils";
+import {DateUtils} from "../Utils";
 import {AnimalController} from "./animals-controller"
 import {TreatmentTypeController} from "./treatment-type-controller";
 import {UserController} from "./user-controller";
@@ -178,7 +178,7 @@ export class TreatmentController {
             params.push(options.treatment_date);
         } else {
             setClause.push("treatment_date = ?");
-            params.push(DateHelp.getCurrentTimeStamp());
+            params.push(DateUtils.getCurrentTimeStamp());
         }
         if (options.treatment_observation !== undefined) {
             setClause.push("treatment_observation = ?");
