@@ -76,7 +76,7 @@ treatmentRouter.get("/user/:id", authUserMiddleWare, async function (req, res) {
  * récupération de tous les traitements pour un animal
  * URL : /zoo/treatment/animal/:id
  * Requete : GET
- * ACCES : Seulement VETERINAIRE ET ADMIN
+ * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
 treatmentRouter.get("/animal/:id", authUserMiddleWare, async function (req, res) {
@@ -96,7 +96,7 @@ treatmentRouter.get("/animal/:id", authUserMiddleWare, async function (req, res)
 
 /**
  * modification d'un Treatment selon son id
- * URL : /zoo/Treatment/:id
+ * URL : /zoo/treatment/:id
  * Requete : PUT
  * ACCES : Seulement VETERINAIRE ET ADMIN
  * Nécessite d'être connecté : OUI

@@ -21,7 +21,7 @@ export class TreatmentController {
     }
 
     /**
-     * Récupération de toutes les présences
+     * Récupération de tous les traitements
      * @param options -> Limit et offset de la requete
      */
     async getAllTreatment(options?: TreatmentGetAllOptions): Promise<TreatmentModel[]> {
@@ -48,7 +48,7 @@ export class TreatmentController {
     }
 
     /**
-     * Récupération de l'id de l'présence maximum existant
+     * Récupération de l'id du traitement maximum existant
      * Utile pour l'incrémentation manuelle
      */
     async getMaxTreatmentId(): Promise<number> {
