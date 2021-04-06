@@ -1,6 +1,7 @@
 import {UserModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {compare, hash} from "bcrypt";
+import {VETERINARY_ID} from "../consts";
 
 interface UserGetAllOptions {
     limit?: number;
@@ -195,6 +196,18 @@ export class UserController {
             console.error(err);
             return null;
         }
+    }
+
+    /**
+     * Vrai si le veterinaire existe
+     * @param veterinaryId
+     * @param connection
+     */
+    public static async doesVeterinaryExist(veterinaryId: number | undefined,connection: Connection) {
+        const isTreatmentValid = await connection.query(`SELECT user_id
+    FROM USER WHERE user_id = ${veterinaryId} AND user_type_id = ${VETERINARY_ID}`);
+        const result = isTreatmentValid[0] as RowDataPacket[];
+        return result.length > 0;
     }
 
 }
