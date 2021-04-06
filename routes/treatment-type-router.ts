@@ -8,7 +8,7 @@ const treatmentTypeRouter = express.Router();
 
 /**
  * récupération de tous les types de traitements
- * URL : /zoo/space-type?limit={x}&offset={x}
+ * URL : /zoo/treatment-type?limit={x}&offset={x}
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
@@ -31,7 +31,7 @@ treatmentTypeRouter.get("/", authUserMiddleWare, async function (req, res) {
 
 /**
  * récupération d'un type de traitement selon son id
- * URL : /zoo/space-type/:id
+ * URL : /zoo/treatment-type/:id
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
@@ -53,7 +53,7 @@ treatmentTypeRouter.get("/:id", authUserMiddleWare, async function (req, res) {
 
 /**
  * modification d'un type de traitement selon son id
- * URL : /zoo/space-type/:id
+ * URL : /zoo/treatment-type/:id
  * Requete : PUT
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
@@ -87,7 +87,7 @@ treatmentTypeRouter.put("/:id", authUserMiddleWare, async function (req, res) {
 
 /**
  * suppression d'un type de traitement selon son id
- * URL : /zoo/space-type/:id
+ * URL : /zoo/treatment-type/:id
  * Requete : DELETE
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
@@ -111,7 +111,7 @@ treatmentTypeRouter.delete("/:id", authUserMiddleWare, async function (req, res)
 
 /**
  * ajout d'un type de traitement
- * URL : /zoo/space-type/add
+ * URL : /zoo/treatment-type/add
  * Requete : POST
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
