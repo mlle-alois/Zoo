@@ -146,7 +146,7 @@ treatmentRouter.put("/:id", authUserMiddleWare, async function (req, res) {
  * suppression d'un Treatment selon son id
  * URL : /zoo/treatment/:id
  * Requete : DELETE
- * ACCES : Tous sauf CLIENT
+ * ACCES : Seulement VETERINAIRE ET ADMIN
  * Nécessite d'être connecté : OUI
  */
 treatmentRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
