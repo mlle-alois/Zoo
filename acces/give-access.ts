@@ -90,7 +90,7 @@ export async function isAdminConnected(req: express.Request): Promise<boolean> {
 }
 
 /**
- * Le token renseigné correspond à un ADMIN
+ * Le token renseigné correspond à un VETERINAIRE
  * @param req
  */
 export async function isVeterinaryConnected(req: express.Request): Promise<boolean> {
