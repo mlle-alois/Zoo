@@ -3,6 +3,7 @@ import {AnimalController, SpeciesController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
 import {isClientConnected} from "../acces/give-access";
+import {LogError} from "../models";
 
 const animalRouter = express.Router();
 
@@ -26,7 +27,10 @@ animalRouter.get("/", authUserMiddleWare, async function (req, res) {
         });
         res.json(animalList);
     }
-    res.status(403).end();
+    LogError.HandleStatus(res, {
+        numError: 403,
+        text: "Vous n'avez pas les droits d'accès"
+    });
 });
 
 /**
