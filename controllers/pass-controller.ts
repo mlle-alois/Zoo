@@ -1,6 +1,8 @@
 import {IPassProps, PassModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {AccessPassSpaceModel, IAccessPassSpaceModelProps} from "../models/access-pass-space-model";
+import {BuyPassUserDateModel, IBuyPassUserDateModelProps} from "../models/buy-pass-user-date-model";
+import {DateUtils} from "../Utils";
 
 interface PassGetAllOptions {
     limit?: number;
@@ -256,6 +258,68 @@ export class PassController {
             console.error(err);
             return false;
         }
+    }
+
+    /**
+     * achat d'un billet par un user à une date (la date actuelle)
+     * @param options
+     */
+    async buyPassForUserAtActualDate(options: IBuyPassUserDateModelProps): Promise<BuyPassUserDateModel | null> {
+        if(options.userId === undefined || options.passId === undefined) {
+            return null;
+        }
+        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
+        const peremptionDateHour = new Date(actualDate.getFullYear() + 1, actualDate.getMonth(), actualDate.getDay());
+        try {
+            const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
+            const peremptionDateHourString = ((peremptionDateHour.toISOString().replace("T", " ")).split("."))[0];
+            await this.connection.execute("INSERT INTO DATE_HOUR (date_hour) VALUES (?)", [
+                actualDateString
+            ]);
+            const res = await this.connection.execute("INSERT INTO BUY_PASS_USER_DATE (user_id, date_hour, pass_id, peremption_date_hour) VALUES (?, ?, ?, ?)", [
+                options.userId,
+                actualDateString,
+                options.passId,
+                peremptionDateHourString
+            ]);
+            const headers = res[0] as ResultSetHeader;
+            if (headers.affectedRows === 1 && options.userId !== undefined && options.passId !== undefined) {
+                return this.getPurchaseByUserIdAndDateHourAndPassId(options.userId, options.passId, actualDateString);
+            }
+            return null;
+        } catch (err) {
+            console.error(err);
+            return null;
+        }
+    }
+
+    /**
+     * Récupération d'un achat de billet via :
+     * @param userId
+     * @param passId
+     * @param actualDate
+     */
+    async getPurchaseByUserIdAndDateHourAndPassId(userId: number, passId: number, actualDate: string): Promise<BuyPassUserDateModel | null> {
+        const res = await this.connection.query(`SELECT user_id, date_hour, pass_id, peremption_date_hour 
+                                                    FROM BUY_PASS_USER_DATE WHERE user_id = ? AND date_hour = ? AND pass_id = ?`, [
+            userId,
+            actualDate,
+            passId
+        ]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                return new BuyPassUserDateModel({
+                    userId: Number.parseInt(row["user_id"]),
+                    dateHour: new Date(row["date_hour"]),
+                    passId: Number.parseInt(row["pass_id"]),
+                    peremptionDateHour: new Date(row["peremption_date_hour"])
+                });
+            }
+        }
+        return null;
     }
 
 }
