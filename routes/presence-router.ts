@@ -74,7 +74,7 @@ presenceRouter.get("/user/:id", authUserMiddleWare, async function (req, res) {
 });
 
 /**
- * modification d'un presence selon son id
+ * modification d'une presence selon son id
  * URL : /zoo/Presence/:id
  * Requete : PUT
  * ACCES : Tous sauf CLIENT
@@ -143,7 +143,7 @@ presenceRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
-presenceRouter.post("/add", authUserMiddleWare, async function (req, res) {
+presenceRouter.post("/add", authUserMiddleWare, async function (req, res ) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();

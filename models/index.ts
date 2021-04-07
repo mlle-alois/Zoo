@@ -6,5 +6,6 @@ export * from "./space-model"
 export * from "./presence-model"
 export * from "./pass-model"
 export * from "./animal-model"
-export * from "./maintenance-model"
 export * from './logError-model'
+export * from "./treatment-type-models"
+export * from "./treatment-model"

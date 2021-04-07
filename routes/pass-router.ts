@@ -2,9 +2,10 @@ import express from "express";
 import {PassController} from "../controllers/pass-controller";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isAdminConnected} from "../acces/give-access";
+import {getAuthorizedToken, isAdminConnected} from "../acces/give-access";
 import {INTEGER} from "sequelize";
 import {SpaceController} from "../controllers/space-controller";
+import {SessionController, UserController} from "../controllers";
 
 const passRouter = express.Router();
 
@@ -15,7 +16,7 @@ const passRouter = express.Router();
  * ACCES : ADMIN
  * Nécessite d'être connecté : OUI
  */
-passRouter.get("/", authUserMiddleWare, async function (req, res) {
+passRouter.get("/get-all", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (await isAdminConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
@@ -177,13 +178,13 @@ passRouter.post("/give-access", authUserMiddleWare, async function (req, res) {
             return;
         }
         //vérification que l'espace existe
-        if(!await spaceController.doesSpaceExist(spaceId)) {
+        if (!await spaceController.doesSpaceExist(spaceId)) {
             res.send('L\'espace renseigné n\'existe pas');
             res.status(409).end();
             return;
         }
         //vérification que le billet existe
-        if(!await passController.doesPassExist(passId)) {
+        if (!await passController.doesPassExist(passId)) {
             res.send('Le billet renseigné n\'existe pas');
             res.status(409).end();
             return;
@@ -260,6 +261,56 @@ passRouter.delete("/remove-access", authUserMiddleWare, async function (req, res
         }
     }
     res.status(403).end();
+});
+
+/**
+ * acheter un billet pour l'utilisateur connecté
+ * URL : /zoo/pass/buy?passId={x}
+ * Requete : POST
+ * ACCES : tout le monde
+ * Nécessite d'être connecté : OUI
+ */
+passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
+    const connection = await DatabaseUtils.getConnection();
+    const passController = new PassController(connection);
+    const userController = new UserController(connection);
+    const sessionController = new SessionController(connection);
+
+    const token = getAuthorizedToken(req);
+    const session = await sessionController.getSessionByToken(token);
+
+    const passId = Number.parseInt(req.query.passId as string);
+    let userId: number | undefined;
+    if (session && session.userId != null) {
+        userId = (await userController.getUserById(session.userId))?.userId;
+    }
+    //informations obligatoires
+    if (passId === undefined || userId === undefined) {
+        res.status(400).end();
+        return;
+    }
+    //vérification que le billet existe
+    const pass = await passController.getPassById(passId);
+    if (pass === undefined) {
+        res.send('Le billet renseigné n\'existe pas');
+        res.status(409).end();
+        return;
+    }
+    if (!pass?.isAvailable) {
+        res.send('Le billet demandé n\'est pas disponible à l\'achat');
+        res.status(409).end();
+        return;
+    }
+    const purchase = await passController.buyPassForUserAtActualDate({
+        passId,
+        userId
+    });
+    if (purchase !== null) {
+        res.status(201);
+        res.json(purchase);
+    } else {
+        res.status(400).end();
+    }
 });
 
 export {

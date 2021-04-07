@@ -4,3 +4,4 @@ export * from './session-controller';
 export * from './species-controller';
 export * from './presence-controller';
 export * from './animals-controller';
+export * from './treatment-controller'
