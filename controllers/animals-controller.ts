@@ -16,7 +16,7 @@ export class AnimalController {
     }
 
     /**
-     * Récupération de toutes les animaux
+     * Récupération de touts les animaux
      * @param options -> Limit et offset de la requete
      */
     async getAllAnimal(options?: AnimalGetAllOptions): Promise<AnimalModel[]> {
@@ -178,7 +178,7 @@ export class AnimalController {
         const rowAnimals = resAnimals[0];
        const numberOfAnimalInSpace = rowAnimals["COUNT(*)"];
 
-        // Verifie si l'espace à la capacité d'acceuilir un autre animal
+        // Vérifie si l'espace à la capacité d'accueillir un autre animal
         const resIsEnoughSpace = await this.connection.query(`SELECT space_capacity
                                                     FROM SPACE where space_id = ${options.spaceId} AND space_capacity > ${numberOfAnimalInSpace}`);
         const isEnoughSpace = resIsEnoughSpace[0] as RowDataPacket[];

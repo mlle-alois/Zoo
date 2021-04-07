@@ -2,6 +2,7 @@ import express from "express";
 import {DatabaseUtils} from "../database/database";
 import {SessionController} from "../controllers";
 import {getAuthorizedToken} from "../acces/give-access";
+import {LogError} from "../models";
 
 /**
  * vérification qu'un utilisateur est connecté
@@ -20,11 +21,15 @@ export async function authUserMiddleWare(req: express.Request, res: express.Resp
             next();
             return;
         } else {
-            //pas le droit d'y accéder -> aucune session associée à ce token
-            res.status(403).end();
+            LogError.HandleStatus(res, {
+                numError: 403,
+                text: "Aucune session associée à ce token"
+            });
         }
     } else {
-        //authentification nécessaire à l'accès
-        res.status(401).end();
+        LogError.HandleStatus(res, {
+            numError: 401,
+            text: "Authentification nécessaire à l'accès"
+        });
     }
 }
