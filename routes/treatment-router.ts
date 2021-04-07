@@ -3,6 +3,7 @@ import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
 import {isAdminConnected, isClientConnected, isVeterinaryConnected} from "../acces/give-access";
 import {TreatmentController} from "../controllers";
+import {LogError} from "../models";
 
 
 const treatmentRouter = express.Router();
@@ -105,7 +106,7 @@ treatmentRouter.put("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (await isVeterinaryConnected(req) || await isAdminConnected(req)) {
 
-        const treatmentId= Number.parseInt(req.params.id);
+        const treatmentId = Number.parseInt(req.params.id);
         const treatmentDate = req.body.date;
         const treatmentObservation = req.body.observation;
         const treatmentAnimalId = req.body.animalId;
@@ -113,7 +114,7 @@ treatmentRouter.put("/:id", authUserMiddleWare, async function (req, res) {
         const treatmentVeterinary = req.body.veterinaryId;
 
         //invalide s'il n'y a pas d'id ou qu'aucune option à modifier n'est renseignée
-        if (treatmentId === undefined ) {
+        if (treatmentId === undefined) {
             res.status(400).end("Renseigner l'id");
             return;
 
@@ -129,13 +130,11 @@ treatmentRouter.put("/:id", authUserMiddleWare, async function (req, res) {
             treatment_type_id: treatmentTypeId,
             veterinary_id: treatmentVeterinary
         });
-        if (typeof treatmentType === "string") {
-            res.status(401).end(treatmentType);
+        if (treatmentType instanceof LogError) {
+            LogError.HandleStatus(res, treatmentType);
             return;
-        }
-        if (treatmentType === null) {
-            res.status(404);
         } else {
+            res.status(200).end();
             res.json(treatmentType);
         }
     }
@@ -186,7 +185,7 @@ treatmentRouter.post("/add", authUserMiddleWare, async function (req, res) {
         const treatmentTypeId = req.body.typeId;
         const treatmentVeterinary = req.body.veterinaryId;
         //toutes les informations sont obligatoires
-        if (treatmentId === undefined || treatmentDate === undefined || treatmentObservation === undefined || treatmentAnimalId === undefined || treatmentTypeId === undefined || treatmentVeterinary === undefined ) {
+        if (treatmentId === undefined || treatmentDate === undefined || treatmentObservation === undefined || treatmentAnimalId === undefined || treatmentTypeId === undefined || treatmentVeterinary === undefined) {
             res.status(400).end("Remplir tous les champs suivants : date ; observation ; animalId ; typeId ; veterinary");
             return;
 
@@ -216,7 +215,6 @@ treatmentRouter.post("/add", authUserMiddleWare, async function (req, res) {
     }
     res.status(403).end();
 });
-
 
 
 export {treatmentRouter};

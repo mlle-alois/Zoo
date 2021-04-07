@@ -1,5 +1,5 @@
 export interface ITreatmentProps {
-    treatment_id?: number
+    treatment_id: number
     treatment_date?: Date
     treatment_observation?: string
     animal_id?: number
@@ -9,7 +9,7 @@ export interface ITreatmentProps {
 }
 
 export class TreatmentModel implements ITreatmentProps {
-    treatment_id?: number
+    treatment_id: number
     treatment_date?: Date
     treatment_observation?: string
     animal_id?: number
