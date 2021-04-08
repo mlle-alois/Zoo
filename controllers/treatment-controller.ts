@@ -1,4 +1,5 @@
-import {ITreatmentProps, TreatmentModel} from "../models";
+// @ts-ignore
+import {ITreatmentProps, LogError, TreatmentModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {DateUtils} from "../Utils";
 import {AnimalController} from "./animals-controller"
@@ -72,9 +73,9 @@ export class TreatmentController {
      * Récupération d'un traitement via :
      * @param TreatmentId
      */
-    async getTreatmentById(TreatmentId: number | undefined): Promise<TreatmentModel | null> {
+    async getTreatmentById(TreatmentId: number): Promise<TreatmentModel|LogError> {
         if (TreatmentId === undefined)
-            return null;
+            return new LogError({numError:400,text:"There is no treatment id"});
 
         const res = await this.connection.query(`SELECT treatment_id, treatment_date, treatment_observation,animal_id,treatment_type_id, veterinary_id
                                                     FROM TREATMENT where treatment_id = ${TreatmentId}`);
@@ -93,7 +94,7 @@ export class TreatmentController {
                 });
             }
         }
-        return null;
+        return new LogError({numError:404,text:"Treatment not found"});
     }
 
     /**
@@ -166,7 +167,7 @@ export class TreatmentController {
      * Modification des informations d'une présence renseignées dans les options
      * @param options
      */
-    async updateTreatment(options: ITreatmentProps): Promise<TreatmentModel | null | string> {
+    async updateTreatment(options: ITreatmentProps): Promise<TreatmentModel | LogError> {
 
 
         const setClause: string[] = [];
@@ -186,19 +187,19 @@ export class TreatmentController {
         }
         if (options.animal_id !== undefined) {
             if (!await AnimalController.doesAnimalExist(options.animal_id, this.connection))
-                return "The animal doesn't exist";
+                return new LogError({numError:400,text:"The animal doesn't exist"});
             setClause.push("animal_id = ?");
             params.push(options.animal_id);
         }
         if (options.treatment_type_id !== undefined) {
             if (!await TreatmentTypeController.doesTreatmentTypeExist(options.treatment_type_id, this.connection))
-                return "The treatment type doesn't exist";
+                return new LogError({numError:400,text:"The treatment type doesn't exist"});
             setClause.push("treatment_type_id = ?");
             params.push(options.treatment_type_id);
         }
         if (options.veterinary_id !== undefined) {
             if (!await UserController.doesVeterinaryExist(options.veterinary_id, this.connection))
-                return "The veterinary doesn't exist";
+                return new LogError({numError:400,text:"The veterinary doesn't exist"});
             setClause.push("veterinary_id = ?");
             params.push(options.veterinary_id);
         }
@@ -209,11 +210,13 @@ export class TreatmentController {
             if (headers.affectedRows === 1) {
                 return this.getTreatmentById(options.treatment_id);
             }
-            return null;
+            return new LogError({numError:400,text:"The treatment update failed"});
+
         } catch (err) {
             console.error(err);
-            return null;
+            return new LogError({numError:400,text:"The treatment update failed"});
         }
+
     }
 
 
@@ -222,14 +225,14 @@ export class TreatmentController {
      * @param options
      *
      */
-    async createTreatment(options: ITreatmentProps): Promise<TreatmentModel | null | string> {
+    async createTreatment(options: ITreatmentProps): Promise<TreatmentModel | LogError> {
         try {
             if (!await UserController.doesVeterinaryExist(options.veterinary_id, this.connection))
-                return "The veterinary doesn't exist";
+                return new LogError({numError:400,text:"The veterinary doesn't exist"});
             if (!await AnimalController.doesAnimalExist(options.animal_id, this.connection))
-                return "The animal doesn't exist";
+                return new LogError({numError:400,text:"The animal doesn't exist"});
             if (!await TreatmentTypeController.doesTreatmentTypeExist(options.treatment_type_id, this.connection))
-                return "The treatment type doesn't exist";
+                new LogError({numError:400,text:"The treatment type doesn't exist"});
 
             const res = await this.connection.execute("INSERT INTO TREATMENT (treatment_id, treatment_date, treatment_observation,animal_id,treatment_type_id, veterinary_id) VALUES (?,?,?,?,?,?)", [
                 options.treatment_id,
@@ -243,10 +246,10 @@ export class TreatmentController {
             if (headers.affectedRows === 1) {
                 return this.getTreatmentById(options.treatment_id);
             }
-            return null;
+            return new LogError({numError:400,text:"Couldn't create treatment"});
         } catch (err) {
             console.error(err);
-            return null;
+            return new LogError({numError:400,text:"Couldn't create treatment"});
         }
 
     }
