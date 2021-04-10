@@ -207,6 +207,7 @@ spaceRouter.post("/media/add", authUserMiddleWare, async function (req, res) {
 });
 
 /**
+ * Supprime le media a associé à l'espace
  * URL : /zoo/space/media/delete
  * Requete : DELETE
  * ACCES : Tous sauf CLIENT
