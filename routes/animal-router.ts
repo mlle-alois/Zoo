@@ -2,14 +2,14 @@ import express from "express";
 import {AnimalController, SpeciesController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isClientConnected} from "../acces/give-access";
+import {isClientConnected} from "../Utils";
 import {LogError} from "../models";
 
 const animalRouter = express.Router();
 
 /**
  * récupération de touts les animaux
- * URL : /zoo/animal?limit={x}&offset={x}
+ * URL : /zoo/animal?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI

@@ -1,14 +1,14 @@
 import express from "express";
-import {SpaceController} from "../controllers/space-controller";
+import {SpaceController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isClientConnected} from "../acces/give-access";
+import {isClientConnected} from "../Utils";
 
 const spaceRouter = express.Router();
 
 /**
  * récupération de tous les espaces
- * URL : /zoo/space?limit={x}&offset={x}
+ * URL : /zoo/space?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI

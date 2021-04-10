@@ -1,4 +1,3 @@
-// @ts-ignore
 import {ITreatmentProps, LogError, TreatmentModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {DateUtils} from "../Utils";

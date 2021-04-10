@@ -6,6 +6,7 @@ import {spaceTypeRouter} from "./space-type-router";
 import {spaceRouter} from "./space-router";
 import {presenceRouter} from "./presence-router";
 import {passRouter} from "./pass-router";
+import {passTypeRouter} from "./pass-type-router";
 import {animalRouter} from "./animal-router"
 import {treatmentTypeRouter} from "./treatment-type-router";
 import {treatmentRouter} from "./treatment-router";
@@ -18,6 +19,7 @@ export function buildRoutes(app: Express) {
     app.use("/zoo/space-type", spaceTypeRouter);
     app.use("/zoo/space", spaceRouter);
     app.use("/zoo/presence", presenceRouter);
+    app.use("/zoo/pass-type", passTypeRouter);
     app.use("/zoo/pass", passRouter);
     app.use("/zoo/animal", animalRouter);
     app.use("/zoo/treatment-type", treatmentTypeRouter);

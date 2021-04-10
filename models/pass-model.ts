@@ -1,20 +1,23 @@
 export interface IPassProps {
-    passId?: number;
-    passName?: string;
-    price?: number;
-    isAvailable?: boolean;
+    passId: number;
+    dateHourPurchase?: Date;
+    dateHourPeremption?: Date;
+    passTypeId?: number;
+    userId?: number;
 }
 
 export class PassModel implements IPassProps {
-    passId?: number;
-    passName?: string;
-    price?: number;
-    isAvailable?: boolean;
+    passId: number;
+    dateHourPurchase?: Date;
+    dateHourPeremption?: Date;
+    passTypeId?: number;
+    userId?: number;
 
     constructor(props: IPassProps) {
-        this.passId = props?.passId;
-        this.passName= props?.passName;
-        this.price = props?.price;
-        this.isAvailable = props?.isAvailable;
+        this.passId = props.passId;
+        this.dateHourPurchase= props?.dateHourPurchase;
+        this.dateHourPeremption = props?.dateHourPeremption;
+        this.passTypeId = props?.passTypeId;
+        this.userId = props?.userId;
     }
 }

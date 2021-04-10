@@ -2,13 +2,13 @@ import express from "express";
 import {UserController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isClientConnected, isConcernedUserOrAdmin} from "../acces/give-access";
+import {isClientConnected, isConcernedUserConcerned, isAdminConnected} from "../Utils";
 
 const userRouter = express.Router();
 
 /**
  * récupération de tous les utilisateurs
- * URL : zoo/user?limit={x}&offset={x}
+ * URL : zoo/user?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
@@ -75,7 +75,7 @@ userRouter.put("/:id", authUserMiddleWare, async function (req, res) {
         return;
     }
     //vérification droits d'accès
-    if (await isConcernedUserOrAdmin(userId, req)) {
+    if (await isConcernedUserConcerned(userId, req) || await isAdminConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const userController = new UserController(connection);
         //modification
@@ -111,7 +111,7 @@ userRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
         return;
     }
     //vérification droits d'accès
-    if (await isConcernedUserOrAdmin(userId, req)) {
+    if (await isConcernedUserConcerned(userId, req) || await isAdminConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const userController = new UserController(connection);
         //suppression

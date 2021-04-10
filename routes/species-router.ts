@@ -2,13 +2,13 @@ import express from "express";
 import {SpeciesController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isClientConnected} from "../acces/give-access";
+import {isClientConnected} from "../Utils";
 
 const speciesRouter = express.Router();
 
 /**
  * récupération de toutes les espèces
- * URL : /zoo/species?limit={x}&offset={x}
+ * URL : /zoo/species?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
