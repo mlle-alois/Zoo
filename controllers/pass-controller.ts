@@ -1,7 +1,5 @@
-import {IPassProps, PassModel} from "../models";
+import {IPassProps, IUsePassUserDateModelProps, LogError, PassModel, UsePassUserDateModel} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
-import {AccessPassSpaceModel, IAccessPassSpaceModelProps} from "../models/access-pass-space-model";
-import {BuyPassUserDateModel, IBuyPassUserDateModelProps} from "../models/buy-pass-user-date-model";
 import {DateUtils} from "../Utils";
 
 interface PassGetAllOptions {
@@ -26,16 +24,17 @@ export class PassController {
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
         //récupération des pass
-        const res = await this.connection.query(`SELECT pass_id, pass_name, price, isAvailable 
+        const res = await this.connection.query(`SELECT pass_id, date_hour_purchase, date_hour_peremption, pass_type_id, user_id 
                                                     FROM PASS LIMIT ${offset}, ${limit}`);
         const data = res[0];
         if (Array.isArray(data)) {
             return (data as RowDataPacket[]).map(function (row: any) {
                 return new PassModel({
                     passId: Number.parseInt(row["pass_id"]),
-                    passName: row["pass_name"],
-                    price: Number.parseFloat(row["price"]),
-                    isAvailable: row["isAvailable"] as boolean
+                    dateHourPurchase: row["date_hour_purchase"],
+                    dateHourPeremption: row["date_hour_peremption"],
+                    passTypeId: Number.parseInt(row["pass_type_id"]),
+                    userId: Number.parseInt(row["user_id"])
                 });
             });
         }
@@ -67,11 +66,11 @@ export class PassController {
      * Récupération d'un billet via :
      * @param passId
      */
-    async getPassById(passId: number | undefined): Promise<PassModel | null> {
+    async getPassById(passId: number): Promise<PassModel | LogError> {
         if (passId === undefined)
-            return null;
+            return new LogError({numError:400, text:"There is no pass id"});
 
-        const res = await this.connection.query(`SELECT pass_id, pass_name, price, isAvailable 
+        const res = await this.connection.query(`SELECT pass_id, date_hour_purchase, date_hour_peremption, pass_type_id, user_id 
                                                     FROM PASS where pass_id = ${passId}`);
         const data = res[0];
         if (Array.isArray(data)) {
@@ -80,42 +79,14 @@ export class PassController {
                 const row = rows[0];
                 return new PassModel({
                     passId: Number.parseInt(row["pass_id"]),
-                    passName: row["pass_name"],
-                    price: Number.parseFloat(row["price"]),
-                    isAvailable: row["isAvailable"] as boolean
+                    dateHourPurchase: row["date_hour_purchase"],
+                    dateHourPeremption: row["date_hour_peremption"],
+                    passTypeId: Number.parseInt(row["pass_type_id"]),
+                    userId: Number.parseInt(row["user_id"])
                 });
             }
         }
-        return null;
-    }
-
-    /**
-     * Récupération d'un accès billet via :
-     * @param passId
-     * @param spaceId
-     */
-    async getAccessByPassIdAndSpaceId(passId: number | undefined, spaceId: number | undefined): Promise<AccessPassSpaceModel | null> {
-        if (passId === undefined || spaceId === undefined)
-            return null;
-
-        const res = await this.connection.query(`SELECT pass_id, space_id, num_order_access 
-                                                    FROM GIVE_ACCESS_PASS_SPACE WHERE pass_id = ? AND space_id = ?`, [
-            passId,
-            spaceId
-        ]);
-        const data = res[0];
-        if (Array.isArray(data)) {
-            const rows = data as RowDataPacket[];
-            if (rows.length > 0) {
-                const row = rows[0];
-                return new AccessPassSpaceModel({
-                    passId: Number.parseInt(row["pass_id"]),
-                    spaceId: Number.parseInt(row["space_id"]),
-                    numOrderAccess: Number.parseInt(row["num_order_access"])
-                });
-            }
-        }
-        return null;
+        return new LogError({numError:404, text:"Pass not found"});
     }
 
     /**
@@ -137,21 +108,21 @@ export class PassController {
      * Modification des informations d'un billet renseignées dans les options
      * @param options
      */
-    async updatePass(options: IPassProps): Promise<PassModel | null> {
+    async updatePass(options: IPassProps): Promise<PassModel | LogError> {
         const setClause: string[] = [];
         const params = [];
         //création des contenus de la requête dynamiquement
-        if (options.passName !== undefined) {
-            setClause.push("pass_name = ?");
-            params.push(options.passName);
+        if (options.dateHourPeremption !== undefined) {
+            setClause.push("date_hour_peremption = ?");
+            params.push(options.dateHourPeremption);
         }
-        if (options.price !== undefined) {
-            setClause.push("price = ?");
-            params.push(options.price);
+        if (options.passTypeId !== undefined) {
+            setClause.push("pass_type_id = ?");
+            params.push(options.passTypeId);
         }
-        if (options.isAvailable !== undefined) {
-            setClause.push("isAvailable = ?");
-            params.push(options.isAvailable);
+        if (options.userId !== undefined) {
+            setClause.push("user_id = ?");
+            params.push(options.userId);
         }
         params.push(options.passId);
         try {
@@ -160,78 +131,39 @@ export class PassController {
             if (headers.affectedRows === 1) {
                 return this.getPassById(options.passId);
             }
-            return null;
+            return new LogError({numError:400,text:"The pass update failed"});
         } catch (err) {
             console.error(err);
-            return null;
+            return new LogError({numError:400,text:"The pass update failed"});
         }
     }
 
     /**
-     * création d'un pass
+     * achat d'un pass
      * @param options
      */
-    async createPass(options: IPassProps): Promise<PassModel | null> {
+    async buyPass(options: IPassProps): Promise<PassModel | LogError> {
+        const dateHourPurchase = new Date(DateUtils.getCurrentTimeStamp());
+        const dateHourPeremption = new Date(dateHourPurchase.getFullYear() + 1, dateHourPurchase.getMonth(), dateHourPurchase.getDay());
         try {
-            const res = await this.connection.execute("INSERT INTO PASS (pass_id, pass_name, price, isAvailable) VALUES (?, ?, ?, ?)", [
+            const dateHourPurchaseString = DateUtils.convertDateToISOString(dateHourPurchase);
+            const dateHourPeremptionString = DateUtils.convertDateToISOString(dateHourPeremption);
+            const res = await this.connection.execute("INSERT INTO PASS (pass_id, date_hour_purchase, date_hour_peremption, pass_type_id, user_id) VALUES (?, ?, ?, ?, ?)", [
                 options.passId,
-                options.passName,
-                options.price,
-                options.isAvailable
+                dateHourPurchaseString,
+                dateHourPeremptionString,
+                options.passTypeId,
+                options.userId
             ]);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
                 return this.getPassById(options.passId);
             }
-            return null;
+            return new LogError({numError:400,text:"Couldn't buy pass"});
         } catch (err) {
             console.error(err);
-            return null;
+            return new LogError({numError:400,text:"Couldn't buy pass"});
         }
-    }
-
-    /**
-     * création d'un accès à un espace pour un billet
-     * @param options
-     */
-    async createAccessForPassAtSpace(options: IAccessPassSpaceModelProps): Promise<AccessPassSpaceModel | null> {
-        const numOrderAccess = options.numOrderAccess === undefined ? null : options.numOrderAccess;
-        try {
-            const res = await this.connection.execute("INSERT INTO GIVE_ACCESS_PASS_SPACE (pass_id, space_id, num_order_access) VALUES (?, ?, ?)", [
-                options.passId,
-                options.spaceId,
-                numOrderAccess
-            ]);
-            const headers = res[0] as ResultSetHeader;
-            if (headers.affectedRows === 1) {
-                return this.getAccessByPassIdAndSpaceId(options.passId, options.spaceId);
-            }
-            return null;
-        } catch (err) {
-            console.error(err);
-            return null;
-        }
-    }
-
-    /**
-     * Savoir si un billet est escape game via son :
-     * @param passId
-     */
-    async isEscapeGamePass(passId: number): Promise<boolean> {
-        const res = await this.connection.query('SELECT COUNT(*) as isEscapeGame FROM PASS WHERE UPPER(pass_name) LIKE \'%ESCAPE%GAME%\' AND pass_id = ?', [passId]);
-        const data = res[0];
-        if (Array.isArray(data)) {
-            const rows = data as RowDataPacket[];
-            if (rows.length > 0) {
-                const row = rows[0];
-                if (row["isEscapeGame"] === null) {
-                    return false;
-                } else {
-                    return (Number.parseInt(row["isEscapeGame"]) > 0);
-                }
-            }
-        }
-        return false;
     }
 
     /**
@@ -245,64 +177,13 @@ export class PassController {
     }
 
     /**
-     * création d'un accès à un espace pour un billet
-     * @param passId
-     * @param spaceId
-     */
-    async removeAccessForPassAtSpace(passId: number, spaceId: number): Promise<boolean> {
-        try {
-            const res = await this.connection.query(`DELETE FROM GIVE_ACCESS_PASS_SPACE where pass_id = ${passId} and space_id = ${spaceId}`);
-            const headers = res[0] as ResultSetHeader;
-            return headers.affectedRows === 1;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
-    }
-
-    /**
-     * achat d'un billet par un user à une date (la date actuelle)
-     * @param options
-     */
-    async buyPassForUserAtActualDate(options: IBuyPassUserDateModelProps): Promise<BuyPassUserDateModel | null> {
-        if(options.userId === undefined || options.passId === undefined) {
-            return null;
-        }
-        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
-        const peremptionDateHour = new Date(actualDate.getFullYear() + 1, actualDate.getMonth(), actualDate.getDay());
-        try {
-            const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
-            const peremptionDateHourString = ((peremptionDateHour.toISOString().replace("T", " ")).split("."))[0];
-            await this.connection.execute("INSERT INTO DATE_HOUR (date_hour) VALUES (?)", [
-                actualDateString
-            ]);
-            const res = await this.connection.execute("INSERT INTO BUY_PASS_USER_DATE (user_id, date_hour, pass_id, peremption_date_hour) VALUES (?, ?, ?, ?)", [
-                options.userId,
-                actualDateString,
-                options.passId,
-                peremptionDateHourString
-            ]);
-            const headers = res[0] as ResultSetHeader;
-            if (headers.affectedRows === 1 && options.userId !== undefined && options.passId !== undefined) {
-                return this.getPurchaseByUserIdAndDateHourAndPassId(options.userId, options.passId, actualDateString);
-            }
-            return null;
-        } catch (err) {
-            console.error(err);
-            return null;
-        }
-    }
-
-    /**
-     * Récupération d'un achat de billet via :
-     * @param userId
+     * Récupération d'une utilisation de billet via :
      * @param passId
      * @param actualDate
      */
-    async getPurchaseByUserIdAndDateHourAndPassId(userId: number, passId: number, actualDate: string): Promise<BuyPassUserDateModel | null> {
-        const res = await this.connection.query(`SELECT user_id, date_hour, pass_id, peremption_date_hour 
-                                                    FROM BUY_PASS_USER_DATE WHERE user_id = ? AND date_hour = ? AND pass_id = ?`, [
-            userId,
+    async getUseByDateHourAndPassId(passId: number, actualDate: string): Promise<UsePassUserDateModel | null> {
+        const res = await this.connection.query(`SELECT pass_id, date_hour
+                                                    FROM USE_PASS_DATE WHERE date_hour = ? AND pass_id = ?`, [
             actualDate,
             passId
         ]);
@@ -311,15 +192,42 @@ export class PassController {
             const rows = data as RowDataPacket[];
             if (rows.length > 0) {
                 const row = rows[0];
-                return new BuyPassUserDateModel({
-                    userId: Number.parseInt(row["user_id"]),
+                return new UsePassUserDateModel({
                     dateHour: new Date(row["date_hour"]),
-                    passId: Number.parseInt(row["pass_id"]),
-                    peremptionDateHour: new Date(row["peremption_date_hour"])
+                    passId: Number.parseInt(row["pass_id"])
                 });
             }
         }
         return null;
+    }
+
+    /**
+     * Validation d'un billet à l'entrée du parc à une date (la date actuelle)
+     * @param options
+     */
+    async usePassForUserAtActualDate(options: IUsePassUserDateModelProps): Promise<UsePassUserDateModel | null> {
+        if(options.passId === undefined) {
+            return null;
+        }
+        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
+        try {
+            const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
+            await this.connection.execute("INSERT INTO DATE_HOUR (date_hour) VALUES (?)", [
+                actualDateString
+            ]);
+            const res = await this.connection.execute("INSERT INTO USE_PASS_DATE (pass_id, date_hour) VALUES (?, ?)", [
+                options.passId,
+                actualDateString
+            ]);
+            const headers = res[0] as ResultSetHeader;
+            if (headers.affectedRows === 1 && options.passId !== undefined) {
+                return this.getUseByDateHourAndPassId(options.passId, actualDateString);
+            }
+            return null;
+        } catch (err) {
+            console.error(err);
+            return null;
+        }
     }
 
 }

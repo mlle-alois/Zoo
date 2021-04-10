@@ -1,7 +1,7 @@
 import express from "express";
 import {DatabaseUtils} from "../database/database";
 import {SessionController} from "../controllers";
-import {getAuthorizedToken} from "../acces/give-access";
+import {getAuthorizedToken} from "../Utils";
 import {LogError} from "../models";
 
 /**

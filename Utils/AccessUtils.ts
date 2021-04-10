@@ -21,7 +21,28 @@ export function getAuthorizedToken(req: express.Request): string {
  * @param userId
  * @param req
  */
-export async function isConcernedUserOrAdmin(userId: number, req: express.Request): Promise<boolean> {
+export async function isConcernedUserConnected(userId: number | undefined, req: express.Request): Promise<boolean> {
+    const token = getAuthorizedToken(req);
+    if (token !== "") {
+        const connection = await DatabaseUtils.getConnection();
+        const sessionController = new SessionController(connection);
+        const session = await sessionController.getSessionByToken(token);
+        if (session !== null) {
+            if (session.userId != null) {
+                if (session.userId === userId) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * récupération de l'id de l'utilisateur connecté
+ * @param req
+ */
+export async function getUserIdConnected(req: express.Request): Promise<number | undefined> {
     const token = getAuthorizedToken(req);
     if (token !== "") {
         const connection = await DatabaseUtils.getConnection();
@@ -29,18 +50,10 @@ export async function isConcernedUserOrAdmin(userId: number, req: express.Reques
         const userController = new UserController(connection);
         const session = await sessionController.getSessionByToken(token);
         if (session !== null) {
-            if (session.userId != null) {
-                if (session.userId === userId) {
-                    return true;
-                }
-                const user = await userController.getUserById(session.userId);
-                if (user?.typeId === ADMIN_USER_TYPE_ID) {
-                    return true;
-                }
-            }
+            return session.userId;
         }
     }
-    return false;
+    return undefined;
 }
 
 /**

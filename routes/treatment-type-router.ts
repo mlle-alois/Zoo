@@ -1,14 +1,14 @@
 import express from "express";
-import {TreatmentTypeController} from "../controllers/treatment-type-controller";
+import {TreatmentTypeController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isClientConnected} from "../acces/give-access";
+import {isClientConnected} from "../Utils";
 
 const treatmentTypeRouter = express.Router();
 
 /**
  * récupération de tous les types de traitements
- * URL : /zoo/treatment-type?limit={x}&offset={x}
+ * URL : /zoo/treatment-type?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI

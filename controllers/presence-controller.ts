@@ -1,4 +1,3 @@
-// @ts-ignore
 import {IPresenceProps, PresenceModel, Timelimit} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {CLEANING_AGENT_ID, RECEPTIONIST_ID, SALESPERSON_ID, VETERINARY_ID} from "../consts";

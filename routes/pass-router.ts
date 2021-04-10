@@ -1,24 +1,22 @@
 import express from "express";
-import {PassController} from "../controllers/pass-controller";
+import {PassController, PassTypeController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {getAuthorizedToken, isAdminConnected} from "../acces/give-access";
-import {INTEGER} from "sequelize";
-import {SpaceController} from "../controllers/space-controller";
-import {SessionController, UserController} from "../controllers";
+import {getUserIdConnected, isAdminConnected, isClientConnected, isConcernedUserConnected} from "../Utils";
+import {LogError} from "../models";
 
 const passRouter = express.Router();
 
 /**
  * récupération de tous les billets
- * URL : /zoo/pass?limit={x}&offset={x}
+ * URL : /zoo/pass/get-all?[limit={x}&offset={x}]
  * Requete : GET
- * ACCES : ADMIN
+ * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
  */
 passRouter.get("/get-all", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
-    if (await isAdminConnected(req)) {
+    if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const passController = new PassController(connection);
         const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : undefined;
@@ -36,22 +34,28 @@ passRouter.get("/get-all", authUserMiddleWare, async function (req, res) {
  * récupération d'un billet selon son id
  * URL : /zoo/pass/:id
  * Requete : GET
- * ACCES : ADMIN
+ * ACCES : Tous sauf CLIENT (sauf si le client est le titulaire de ce billet)
  * Nécessite d'être connecté : OUI
  */
 passRouter.get("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
-    if (await isAdminConnected(req)) {
-        const connection = await DatabaseUtils.getConnection();
-        const passController = new PassController(connection);
-        const passType = await passController.getPassById(Number.parseInt(req.params.id));
-        if (passType === null) {
-            res.status(404).end();
-        } else {
-            res.json(passType);
+    const connection = await DatabaseUtils.getConnection();
+    const passController = new PassController(connection);
+    //récupération du billet
+    const pass = await passController.getPassById(Number.parseInt(req.params.id));
+    if (!(pass instanceof LogError)) {
+        if (!await isClientConnected(req) || await isConcernedUserConnected(pass.userId, req)) {
+            if (pass === null) {
+                res.status(404).end();
+            } else {
+                res.json(pass);
+            }
         }
+        res.status(403).end();
+    } else {
+        LogError.HandleStatus(res, pass);
+        return;
     }
-    res.status(403).end();
 });
 
 /**
@@ -65,23 +69,45 @@ passRouter.put("/:id", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (await isAdminConnected(req)) {
         const passId = Number.parseInt(req.params.id);
-        const passName = req.body.passName;
-        const price = req.body.price;
-        const isAvailable = req.body.isAvailable;
+        const dateHourPeremption = req.body.dateHourPeremption;
+        const passTypeId = isNaN(Number.parseInt(req.body.passTypeId)) ? undefined : Number.parseInt(req.body.passTypeId);
+        const userId = isNaN(Number.parseInt(req.body.userId)) ? undefined : Number.parseInt(req.body.userId);
 
         //invalide s'il n'y a pas d'id ou qu'aucune option à modifier n'est renseignée
-        if (passId === undefined || (passName === undefined && price === undefined && isAvailable === undefined)) {
+        if (passId === undefined || (dateHourPeremption === undefined &&
+            passTypeId === undefined && userId === undefined)) {
             res.status(400).end();
             return;
         }
         const connection = await DatabaseUtils.getConnection();
         const passController = new PassController(connection);
+        const passTypeController = new PassTypeController(connection);
+
+        //vérifier que le billet existe
+        const passById = await passController.getPassById(passId);
+        if (passById instanceof LogError) {
+            LogError.HandleStatus(res, passById);
+            return;
+        }
+        //vérifier que le type de billet est disponible
+        if (passTypeId !== undefined) {
+            const passType = await passTypeController.getPassTypeById(passTypeId);
+            if (passType instanceof LogError) {
+                LogError.HandleStatus(res, passType);
+                return;
+            } else {
+                if (!passType.passTypeIsAvailable) {
+                    LogError.HandleStatus(res, new LogError({numError: 409, text: "Pass type is not available"}));
+                    return;
+                }
+            }
+        }
         //modification
         const pass = await passController.updatePass({
             passId,
-            passName,
-            price,
-            isAvailable
+            dateHourPeremption,
+            passTypeId,
+            userId
         });
         if (pass === null) {
             res.status(404);
@@ -117,160 +143,61 @@ passRouter.delete("/delete/:id", authUserMiddleWare, async function (req, res) {
 });
 
 /**
- * ajout d'un billet
- * URL : /zoo/pass/add
+ * achat d'un billet
+ * URL : /zoo/pass/buy
  * Requete : POST
- * ACCES : ADMIN
+ * ACCES : Tout le monde
  * Nécessite d'être connecté : OUI
  */
-passRouter.post("/add", authUserMiddleWare, async function (req, res) {
+passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
-    if (await isAdminConnected(req)) {
-        const connection = await DatabaseUtils.getConnection();
-        const passController = new PassController(connection);
+    const connection = await DatabaseUtils.getConnection();
+    const passController = new PassController(connection);
 
-        const passId = await passController.getMaxPassId() + 1;
-        const passName = req.body.passName;
-        const price = req.body.price;
-        const isAvailable = req.body.isAvailable;
-        //toutes les informations sont obligatoires
-        if (passId === undefined || (passName === undefined && price === undefined && isAvailable === undefined)) {
-            res.status(400).end();
+    const passId = await passController.getMaxPassId() + 1;
+    const passTypeId = Number.parseInt(req.body.passTypeId);
+    const userId = await getUserIdConnected(req);
+    //toutes les informations sont obligatoires
+    if (passId === undefined || passTypeId === undefined || userId === undefined) {
+        res.status(400).end();
+        return;
+    }
+    //vérifier que le billet est disponible à l'achat
+    const passTypeController = new PassTypeController(connection);
+    const passType = await passTypeController.getPassTypeById(passTypeId);
+
+    //TODO refacto cette partie de code (en double avec la modification)
+    if (passType instanceof LogError) {
+        LogError.HandleStatus(res, passType);
+        return;
+    } else {
+        if (!passType.passTypeIsAvailable) {
+            LogError.HandleStatus(res, new LogError({numError: 409, text: "Pass type is not available"}));
             return;
         }
-        const passType = await passController.createPass({
-            passId,
-            passName,
-            price,
-            isAvailable
-        })
-
-        if (passType !== null) {
-            res.status(201);
-            res.json(passType);
-        } else {
-            res.status(400).end();
-        }
     }
-    res.status(403).end();
+    const pass = await passController.buyPass({
+        passId,
+        passTypeId,
+        userId
+    })
+
+    if (pass !== null) {
+        res.status(201);
+        res.json(pass);
+    } else {
+        res.status(400).end();
+    }
 });
 
 /**
- * donner à un billet l'accès à un espace
- * URL : /zoo/pass/give-access?passId={x}&spaceId={x}[&order={x}]
- * Requete : POST
- * ACCES : ADMIN
- * Nécessite d'être connecté : OUI
- */
-passRouter.post("/give-access", authUserMiddleWare, async function (req, res) {
-    //vérification droits d'accès
-    if (await isAdminConnected(req)) {
-        const connection = await DatabaseUtils.getConnection();
-        const passController = new PassController(connection);
-        const spaceController = new SpaceController(connection);
-
-        const passId = Number.parseInt(req.query.passId as string);
-        const spaceId = Number.parseInt(req.query.spaceId as string);
-        let numOrderAccess: number | undefined = Number.parseInt(req.query.order as string);
-        //informations obligatoires
-        if (passId === undefined || spaceId === undefined) {
-            res.status(400).end();
-            return;
-        }
-        //vérification que l'espace existe
-        if (!await spaceController.doesSpaceExist(spaceId)) {
-            res.send('L\'espace renseigné n\'existe pas');
-            res.status(409).end();
-            return;
-        }
-        //vérification que le billet existe
-        if (!await passController.doesPassExist(passId)) {
-            res.send('Le billet renseigné n\'existe pas');
-            res.status(409).end();
-            return;
-        }
-        //numéro d'ordre obligatoire si le billet est un escape game
-        const isEscapeGame = await passController.isEscapeGamePass(passId);
-        if (isEscapeGame) {
-            if (isNaN(numOrderAccess)) {
-                res.send('Un numéro d\'ordre doit être renseigné');
-                res.status(400).end();
-                return;
-            }
-        }
-        //si ce n'est pas un type escape game, on met l'ordre à undefined si jamais il est renseigné
-        else {
-            numOrderAccess = undefined;
-        }
-        //vérification si le billet a déjà accès à l'espace
-        const passAccess = await passController.getAccessByPassIdAndSpaceId(passId, spaceId);
-        if (passAccess !== null) {
-            res.send('L\'accès à cet espace est déjà possible pour ce billet');
-            res.status(409).end(); //conflit
-            return;
-        }
-        const passType = await passController.createAccessForPassAtSpace({
-            passId,
-            spaceId,
-            numOrderAccess
-        });
-
-        if (passType !== null) {
-            res.status(201);
-            res.json(passType);
-        } else {
-            res.status(400).end();
-        }
-    }
-    res.status(403).end();
-});
-
-/**
- * retirer l'accès à un espace à un billet
- * URL : /zoo/pass/remove-access?passId={x}&spaceId={x}
- * Requete : DELETE
- * ACCES : ADMIN
- * Nécessite d'être connecté : OUI
- */
-passRouter.delete("/remove-access", authUserMiddleWare, async function (req, res) {
-    //vérification droits d'accès
-    if (await isAdminConnected(req)) {
-        const connection = await DatabaseUtils.getConnection();
-        const passController = new PassController(connection);
-
-        const passId = Number.parseInt(req.query.passId as string);
-        const spaceId = Number.parseInt(req.query.spaceId as string);
-        //informations obligatoires
-        if (passId === undefined || spaceId === undefined) {
-            res.status(400).end();
-            return;
-        }
-        //vérification si le billet a déjà accès à l'espace
-        const passAccess = await passController.getAccessByPassIdAndSpaceId(passId, spaceId);
-        if (passAccess === null) {
-            res.send('Le billet n\'a pas accès à l\'espace');
-            res.status(409).end(); //conflit
-            return;
-        }
-        const success = await passController.removeAccessForPassAtSpace(passId, spaceId);
-
-        if (success) {
-            res.status(201);
-        } else {
-            res.status(400).end();
-        }
-    }
-    res.status(403).end();
-});
-
-/**
- * acheter un billet pour l'utilisateur connecté
- * URL : /zoo/pass/buy?passId={x}
+ * utiliser un billet pour l'utilisateur connecté (validation à l'entrée du parc)
+ * URL : /zoo/pass/use?passId={x}
  * Requete : POST
  * ACCES : tout le monde
  * Nécessite d'être connecté : OUI
  */
-passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
+/*passRouter.post("/use", authUserMiddleWare, async function (req, res) {
     const connection = await DatabaseUtils.getConnection();
     const passController = new PassController(connection);
     const userController = new UserController(connection);
@@ -289,6 +216,7 @@ passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
         res.status(400).end();
         return;
     }
+    //TODO vérifier que l'utilisateur a acheté un billet
     //vérification que le billet existe
     const pass = await passController.getPassById(passId);
     if (pass === undefined) {
@@ -311,7 +239,7 @@ passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
     } else {
         res.status(400).end();
     }
-});
+});*/
 
 export {
     passRouter

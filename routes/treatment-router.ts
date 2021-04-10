@@ -1,7 +1,7 @@
 import express from "express";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isAdminConnected, isClientConnected, isVeterinaryConnected} from "../acces/give-access";
+import {isAdminConnected, isClientConnected, isVeterinaryConnected} from "../Utils";
 import {TreatmentController} from "../controllers";
 import {LogError} from "../models";
 
@@ -10,7 +10,7 @@ const treatmentRouter = express.Router();
 
 /**
  * récupération de tous les Treatments
- * URL : /zoo/treatment?limit={x}&offset={x}
+ * URL : /zoo/treatment?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI

@@ -190,7 +190,7 @@ export class SpaceController {
      * Vrai si l'espace existe
      * @param spaceId
      */
-    async doesSpaceExist(spaceId: number) {
+    async doesSpaceExist(spaceId: number): Promise<boolean> {
         const isTreatmentValid = await this.connection.query(`SELECT space_id FROM SPACE WHERE space_id = ${spaceId}`);
         const result = isTreatmentValid[0] as RowDataPacket[];
         return result.length > 0;

@@ -1,7 +1,7 @@
 import express from "express";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isClientConnected} from "../acces/give-access";
+import {isClientConnected} from "../Utils";
 import {PresenceController} from "../controllers";
 
 
@@ -9,7 +9,7 @@ const presenceRouter = express.Router();
 
 /**
  * récupération de tous les presences
- * URL : /zoo/Presence?limit={x}&offset={x}
+ * URL : /zoo/Presence?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
