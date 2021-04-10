@@ -39,6 +39,7 @@ export class SessionController {
      */
     async getSessionByToken(token: string): Promise<SessionModel | null> {
         //récupération de la session
+        
         const res = await this.connection.query(`SELECT session_id, token, createdAt, updatedAt, deletedAt, user_id 
                                                     FROM SESSION where token = ? `, [
             token
@@ -117,6 +118,28 @@ export class SessionController {
         } catch (err) {
             console.error(err);
             return false;
+        }
+    }
+    /**
+     * Récupération d'une session depuis le token
+     * @param token
+     */
+    async getLastUpdatedTimePlus2Hours(token: string): Promise<string | undefined> {
+        //récupération de la session
+
+        const res = await this.connection.query(`SELECT updatedAt + INTERVAL '2' HOUR 
+                                                    FROM SESSION where token = ? `, [
+            token
+        ]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+             return row["updatedAt + INTERVAL '2' HOUR"];
+
+
+            }
         }
     }
 

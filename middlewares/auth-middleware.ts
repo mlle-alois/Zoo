@@ -4,6 +4,9 @@ import {SessionController} from "../controllers";
 import {getAuthorizedToken} from "../Utils";
 import {LogError} from "../models";
 
+
+
+
 /**
  * vérification qu'un utilisateur est connecté
  * ATTENTION : Cette fonction ne vérifie pas les droits d'accès
@@ -17,6 +20,7 @@ export async function authUserMiddleWare(req: express.Request, res: express.Resp
         const connection = await DatabaseUtils.getConnection();
         const sessionController = new SessionController(connection);
         const session = await sessionController.getSessionByToken(token);
+
         if(session !== null) {
             next();
             return;
