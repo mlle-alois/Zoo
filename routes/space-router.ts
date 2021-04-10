@@ -3,6 +3,7 @@ import {SpaceController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
 import {isClientConnected} from "../Utils";
+import {LogError} from "../models";
 
 const spaceRouter = express.Router();
 
@@ -168,6 +169,94 @@ spaceRouter.post("/add", authUserMiddleWare, async function (req, res) {
         } else {
             res.status(400).end();
         }
+    }
+    res.status(403).end();
+});
+
+
+/**
+ * ajout d'un espace
+ * URL : /zoo/space/media/add
+ * Requete : POST
+ * ACCES : Tous sauf CLIENT
+ * Nécessite d'être connecté : OUI
+ */
+spaceRouter.post("/media/add", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (!await isClientConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const spaceController = new SpaceController(connection);
+
+        const mediaId = req.body.mediaId;
+        const spaceId = req.body.spaceId;
+        //toutes les informations sont obligatoires
+
+        const addMedia = await spaceController.addMediaToSpace({
+            media_id: mediaId,
+            space_id: spaceId,
+        })
+
+        if (addMedia instanceof LogError) {
+            LogError.HandleStatus(res, addMedia);
+            return;
+        } else {
+            res.json(addMedia);
+        }
+    }
+    res.status(403).end();
+});
+
+/**
+ * URL : /zoo/space/media/delete
+ * Requete : DELETE
+ * ACCES : Tous sauf CLIENT
+ * Nécessite d'être connecté : OUI
+ */
+spaceRouter.delete("/media/delete", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (!await isClientConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const spaceController = new SpaceController(connection);
+        //suppression
+        const success = await spaceController.removeAssociatedMediaBySpaceId(
+            Number.parseInt(req.body.mediaId),
+            Number.parseInt(req.body.spaceId));
+        if (success instanceof LogError) {
+            LogError.HandleStatus(res, success);
+            return;
+        }
+        if(success) {
+            res.json(success);
+        }
+    }
+    res.status(403).end();
+});
+
+
+/**
+ * récupération de tous les médias liés à un espace
+ * URL : /zoo/space/media/?[limit={x}&offset={x}]
+ * Requete : GET
+ * ACCES : Tous sauf CLIENT
+ * Nécessite d'être connecté : OUI
+ */
+spaceRouter.get("/media/:id", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (!await isClientConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const spaceController = new SpaceController(connection);
+        const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : undefined;
+        const offset = req.query.offset ? Number.parseInt(req.query.offset as string) : undefined;
+        const spaceTypeList = await spaceController.getAllAssociateSpaceMedia( Number.parseInt(req.params.id)
+          ,{
+            limit,
+            offset
+        });
+        if (spaceTypeList instanceof LogError) {
+            LogError.HandleStatus(res, spaceTypeList);
+            return;
+        }
+        res.json(spaceTypeList);
     }
     res.status(403).end();
 });

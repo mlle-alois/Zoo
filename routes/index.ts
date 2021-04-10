@@ -10,6 +10,7 @@ import {passTypeRouter} from "./pass-type-router";
 import {animalRouter} from "./animal-router"
 import {treatmentTypeRouter} from "./treatment-type-router";
 import {treatmentRouter} from "./treatment-router";
+import {mediaRouter} from "./media-router";
 
 
 export function buildRoutes(app: Express) {
@@ -24,4 +25,5 @@ export function buildRoutes(app: Express) {
     app.use("/zoo/animal", animalRouter);
     app.use("/zoo/treatment-type", treatmentTypeRouter);
     app.use("/zoo/treatment", treatmentRouter);
+    app.use("/zoo/media", mediaRouter);
 }
