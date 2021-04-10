@@ -7,6 +7,8 @@ import {
     IUsePassUserDateModelProps, LogError,
     UsePassUserDateModel
 } from "../models";
+import {DatabaseUtils} from "../database/database";
+import {SpaceController} from "./space-controller";
 
 interface PassTypeGetAllOptions {
     limit?: number;
@@ -199,7 +201,30 @@ export class PassTypeController {
      * @param options
      */
     async createAccessForPassTypeAtSpace(options: IAccessPassSpaceModelProps): Promise<AccessPassSpaceModel | LogError> {
-        const numOrderAccess = options.numOrderAccess === undefined ? null : options.numOrderAccess;
+        const passTypeController = new PassTypeController(this.connection);
+        const spaceController = new SpaceController(this.connection);
+
+        //vérification que l'espace existe
+        if (!await spaceController.doesSpaceExist(options.spaceId)) {
+            return new LogError({numError: 409, text: "L\'espace renseigné n\'existe pas"});
+        }
+        //vérification que le type de billet existe
+        if (!await passTypeController.doesPassTypeExist(options.passTypeId)) {
+            return new LogError({numError: 409, text: "Le type de billet renseigné n\'existe pas"});
+        }
+        //numéro d'ordre obligatoire si le type de billet est un escape game
+        const isEscapeGame = await passTypeController.isEscapeGamePassType(options.passTypeId);
+        if (isEscapeGame) {
+            if (isNaN(options.numOrderAccess)) {
+                return new LogError({numError: 400, text: "Un numéro d\'ordre doit être renseigné"});
+            }
+        }
+        //vérification si le type de billet a déjà accès à l'espace
+        const passTypeAccess = await passTypeController.getAccessByPassTypeIdAndSpaceId(options.passTypeId, options.spaceId);
+        if (!(passTypeAccess instanceof LogError)) {
+            return new LogError({numError: 409, text: "L\'accès à cet espace est déjà possible pour ce type de billet"});
+        }
+        const numOrderAccess = isEscapeGame ? null : options.numOrderAccess;
         try {
             const res = await this.connection.execute("INSERT INTO GIVE_ACCESS_PASS_TYPE_SPACE (pass_type_id, space_id, num_order_access) VALUES (?, ?, ?)", [
                 options.passTypeId,

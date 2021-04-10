@@ -155,6 +155,8 @@ passTypeRouter.post("/add", authUserMiddleWare, async function (req, res) {
     res.status(403).end();
 });
 
+//TODO faire get all access, get access for pass id, get access for space id
+
 /**
  * donner à un type de billet l'accès à un espace
  * URL : /zoo/pass-type/give-access?passTypeId={x}&spaceId={x}[&order={x}]
@@ -167,7 +169,6 @@ passTypeRouter.post("/give-access", authUserMiddleWare, async function (req, res
     if (await isAdminConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const passTypeController = new PassTypeController(connection);
-        const spaceController = new SpaceController(connection);
 
         const passTypeId = Number.parseInt(req.query.passTypeId as string);
         const spaceId = Number.parseInt(req.query.spaceId as string);
@@ -175,38 +176,6 @@ passTypeRouter.post("/give-access", authUserMiddleWare, async function (req, res
         //informations obligatoires
         if (passTypeId === undefined || isNaN(passTypeId) || spaceId === undefined || isNaN(spaceId)) {
             res.status(400).end();
-            return;
-        }
-        //vérification que l'espace existe
-        if (!await spaceController.doesSpaceExist(spaceId)) {
-            res.send('L\'espace renseigné n\'existe pas');
-            res.status(409).end();
-            return;
-        }
-        //vérification que le type de billet existe
-        if (!await passTypeController.doesPassTypeExist(passTypeId)) {
-            res.send('Le type de billet renseigné n\'existe pas');
-            res.status(409).end();
-            return;
-        }
-        //numéro d'ordre obligatoire si le type de billet est un escape game
-        const isEscapeGame = await passTypeController.isEscapeGamePassType(passTypeId);
-        if (isEscapeGame) {
-            if (isNaN(numOrderAccess)) {
-                res.send('Un numéro d\'ordre doit être renseigné');
-                res.status(400).end();
-                return;
-            }
-        }
-        //si ce n'est pas un type escape game, on met l'ordre à undefined si jamais il est renseigné
-        else {
-            numOrderAccess = undefined;
-        }
-        //vérification si le type de billet a déjà accès à l'espace
-        const passTypeAccess = await passTypeController.getAccessByPassTypeIdAndSpaceId(passTypeId, spaceId);
-        if (!(passTypeAccess instanceof LogError)) {
-            res.send('L\'accès à cet espace est déjà possible pour ce type de billet');
-            res.status(409).end(); //conflit
             return;
         }
         const passType = await passTypeController.createAccessForPassTypeAtSpace({
