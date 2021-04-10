@@ -2,7 +2,7 @@ import express from "express";
 import {UserController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {isClientConnected, isConcernedUserConcerned, isAdminConnected} from "../Utils";
+import {isClientConnected, isConcernedUserConnected, isAdminConnected} from "../Utils";
 
 const userRouter = express.Router();
 
@@ -75,7 +75,7 @@ userRouter.put("/:id", authUserMiddleWare, async function (req, res) {
         return;
     }
     //vérification droits d'accès
-    if (await isConcernedUserConcerned(userId, req) || await isAdminConnected(req)) {
+    if (await isConcernedUserConnected(userId, req) || await isAdminConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const userController = new UserController(connection);
         //modification
@@ -111,7 +111,7 @@ userRouter.delete("/:id", authUserMiddleWare, async function (req, res) {
         return;
     }
     //vérification droits d'accès
-    if (await isConcernedUserConcerned(userId, req) || await isAdminConnected(req)) {
+    if (await isConcernedUserConnected(userId, req) || await isAdminConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const userController = new UserController(connection);
         //suppression

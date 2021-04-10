@@ -2,7 +2,7 @@ import express from "express";
 import {PassController, PassTypeController} from "../controllers";
 import {DatabaseUtils} from "../database/database";
 import {authUserMiddleWare} from "../middlewares/auth-middleware";
-import {getUserIdConnected, isAdminConnected, isClientConnected, isConcernedUserConcerned} from "../Utils";
+import {getUserIdConnected, isAdminConnected, isClientConnected, isConcernedUserConnected} from "../Utils";
 import {LogError} from "../models";
 
 const passRouter = express.Router();
@@ -44,7 +44,7 @@ passRouter.get("/:id", authUserMiddleWare, async function (req, res) {
     //récupération du billet
     const pass = await passController.getPassById(Number.parseInt(req.params.id));
     if (!(pass instanceof LogError)) {
-        if (!await isClientConnected(req) || await isConcernedUserConcerned(pass.userId, req)) {
+        if (!await isClientConnected(req) || await isConcernedUserConnected(pass.userId, req)) {
             if (pass === null) {
                 res.status(404).end();
             } else {

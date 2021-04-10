@@ -21,7 +21,7 @@ export function getAuthorizedToken(req: express.Request): string {
  * @param userId
  * @param req
  */
-export async function isConcernedUserConcerned(userId: number | undefined, req: express.Request): Promise<boolean> {
+export async function isConcernedUserConnected(userId: number | undefined, req: express.Request): Promise<boolean> {
     const token = getAuthorizedToken(req);
     if (token !== "") {
         const connection = await DatabaseUtils.getConnection();
