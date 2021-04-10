@@ -146,8 +146,8 @@ export class PassController {
         const dateHourPurchase = new Date(DateUtils.getCurrentTimeStamp());
         const dateHourPeremption = new Date(dateHourPurchase.getFullYear() + 1, dateHourPurchase.getMonth(), dateHourPurchase.getDay());
         try {
-            const dateHourPurchaseString = ((dateHourPurchase.toISOString().replace("T", " ")).split("."))[0];
-            const dateHourPeremptionString = ((dateHourPeremption.toISOString().replace("T", " ")).split("."))[0];
+            const dateHourPurchaseString = DateUtils.convertDateToISOString(dateHourPurchase);
+            const dateHourPeremptionString = DateUtils.convertDateToISOString(dateHourPeremption);
             const res = await this.connection.execute("INSERT INTO PASS (pass_id, date_hour_purchase, date_hour_peremption, pass_type_id, user_id) VALUES (?, ?, ?, ?, ?)", [
                 options.passId,
                 dateHourPurchaseString,
