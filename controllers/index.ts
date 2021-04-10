@@ -1,5 +1,6 @@
 export * from './animals-controller';
 export * from './auth-controller';
+export * from './media-controller';
 export * from './pass-controller';
 export * from './pass-type-controller';
 export * from './presence-controller';
@@ -10,3 +11,4 @@ export * from './species-controller';
 export * from './treatment-controller';
 export * from './treatment-type-controller';
 export * from './user-controller';
+
