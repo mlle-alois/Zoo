@@ -20,12 +20,12 @@ export class MediaController {
      * Récupération de tous les medias
      * @param options -> Limit et offset de la requete
      */
-    async getAllMedia(options?: MediaGetAllOptions): Promise<MediaModel[]> {
+    async getAllMedia(options?: MediaGetAllOptions): Promise<MediaModel[] | LogError> {
         //récupération des options
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
         //récupération des medias
-        const res = await this.connection.query(`SELECT media_id, media_path, 
+        const res = await this.connection.query(`SELECT media_id, media_path
                                                     FROM MEDIA LIMIT ${offset}, ${limit}`);
         const data = res[0];
         if (Array.isArray(data)) {
@@ -36,7 +36,7 @@ export class MediaController {
                 });
             });
         }
-        return [];
+        return new LogError({numError:404,text:"Media not found"});
     }
 
     /**

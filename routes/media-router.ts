@@ -26,6 +26,11 @@ mediaRouter.get("/", authUserMiddleWare, async function (req, res) {
             limit,
             offset
         });
+
+        if (mediaTypeList instanceof LogError) {
+            LogError.HandleStatus(res, mediaTypeList);
+            return;
+        }
         res.json(mediaTypeList);
     }
     res.status(403).end();
