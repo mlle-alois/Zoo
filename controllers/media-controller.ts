@@ -103,7 +103,7 @@ export class MediaController {
                 });
             });
         }
-        return [];
+        return new LogError({numError:404,text:"Media not found"});
     }
 
 
