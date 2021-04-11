@@ -256,7 +256,7 @@ export class PassController {
 
         const actualDate = new Date(DateUtils.getCurrentTimeStamp());
         try {
-            const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
+            const actualDateString = DateUtils.convertDateToISOString(actualDate);
             await this.connection.execute("INSERT INTO DATE_HOUR (date_hour) VALUES (?)", [
                 actualDateString
             ]);
@@ -322,7 +322,7 @@ export class PassController {
                 const row = rows[0];
                 const actualDate = new Date(DateUtils.getCurrentTimeStamp());
                 try {
-                    const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
+                    const actualDateString = DateUtils.convertDateToISOString(actualDate);
                     const lastSpaceVisted = new VisitSpacePassHourModel({
                         pass_id: Number.parseInt(row["pass_id"]),
                         date_hour_enter: row["date_hour_enter"],

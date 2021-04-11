@@ -190,19 +190,19 @@ passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
     }
 });
 /**
- * achat d'un billet
- * URL : /zoo/pass/visit/:id
+ * Visite d'un espace
+ * URL : /zoo/pass/visit?passId=X&spaceId=X
  * Requete : POST
  * ACCES : Tout le monde
  * Nécessite d'être connecté : OUI
  */
-passRouter.post("/visit/:id", authUserMiddleWare, async function (req, res) {
+passRouter.post("/visit", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     const connection = await DatabaseUtils.getConnection();
     const passController = new PassController(connection);
 
-    const passId = Number.parseInt(req.params.id);
-    const spaceId = Number.parseInt(req.body.spaceId);
+    const passId = Number.parseInt(req.query.passId as string);
+    const spaceId = Number.parseInt(req.query.spaceId as string);
     const userId = await getUserIdConnected(req);
     //toutes les informations sont obligatoires
     if (userId === undefined) {
