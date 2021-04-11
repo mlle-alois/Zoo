@@ -14,6 +14,6 @@ export class LogError implements LogErrorProps{
     }
 
     static HandleStatus(res:any ,log: LogError){
-        res.status(log.numError).end(log.text);
+        res.status(log.numError);
     }
 }

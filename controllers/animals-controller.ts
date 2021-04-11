@@ -216,17 +216,16 @@ export class AnimalController {
             return null;
         }
     }
+
     /**
      * Vrai s'il l'animal existe
      * @param id_animal
      * @param connection
      */
-
     static async doesAnimalExist(id_animal: number | undefined,connection: Connection) {
         const isTreatmentValid = await connection.query(`SELECT animal_id
     FROM ANIMAL WHERE animal_id = ${id_animal}`);
         const result = isTreatmentValid[0] as RowDataPacket[];
         return result.length > 0;
     }
-
 }
