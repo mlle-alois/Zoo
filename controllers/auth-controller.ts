@@ -1,5 +1,5 @@
 import {UserModel} from "../models";
-import {Connection} from "mysql2/promise";
+import {Connection, RowDataPacket} from "mysql2/promise";
 import {hash} from "bcrypt";
 import {SessionModel} from "../models";
 import {UserController} from "./user-controller";
@@ -34,6 +34,9 @@ export class AuthController {
     async subscribe(user: IUserCreationProps): Promise<UserModel | null> {
         //hachage du mot de passe
         const passwordHashed = await hash(user.password, 5);
+        if(await AuthController.doesEmailAlreadyTaken(user.mail,this.connection)){
+            return null;
+        }
         try {
             //inscription de l'utilisateur
             await this.connection.execute(`INSERT INTO USER (user_id, user_mail, user_password, user_name, user_firstname, user_phone_number, user_type_id) VALUES (?, ?, ?, ?, ?, ?, ?)`, [
@@ -78,5 +81,11 @@ export class AuthController {
             console.error(err);
             return null;
         }
+    }
+    public static async doesEmailAlreadyTaken(userMail: string,connection: Connection) {
+        const isTreatmentValid = await connection.query(`SELECT user_mail
+    FROM USER WHERE user_mail = "${userMail}"`);
+        const result = isTreatmentValid[0] as RowDataPacket[];
+        return result.length > 0;
     }
 }
