@@ -1,13 +1,10 @@
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
-import {DateUtils} from "../Utils";
 import {IPassTypeProps, PassTypeModel} from "../models/pass-type-model";
 import {
     AccessPassSpaceModel,
     IAccessPassSpaceModelProps,
-    IUsePassUserDateModelProps, LogError,
-    UsePassUserDateModel
+    LogError
 } from "../models";
-import {DatabaseUtils} from "../database/database";
 import {SpaceController} from "./space-controller";
 
 interface PassTypeGetAllOptions {
@@ -202,10 +199,9 @@ export class PassTypeController {
      */
     async createAccessForPassTypeAtSpace(options: IAccessPassSpaceModelProps): Promise<AccessPassSpaceModel | LogError> {
         const passTypeController = new PassTypeController(this.connection);
-        const spaceController = new SpaceController(this.connection);
 
         //vérification que l'espace existe
-        if (!await spaceController.doesSpaceExist(options.spaceId)) {
+        if (!await SpaceController.doesSpaceExist(options.spaceId,this.connection)) {
             return new LogError({numError: 409, text: "L\'espace renseigné n\'existe pas"});
         }
         //vérification que le type de billet existe

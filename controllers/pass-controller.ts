@@ -1,6 +1,16 @@
-import {IPassProps, IUsePassUserDateModelProps, LogError, PassModel, UsePassUserDateModel} from "../models";
+import {
+    IPassProps,
+    IUsePassUserDateModelProps,
+    LogError,
+    PassModel,
+    UsePassUserDateModel,
+    IVisitSpacePassHourModelProps,
+    VisitSpacePassHourModel
+} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {DateUtils} from "../Utils";
+import {SpaceController} from "./space-controller";
+
 
 interface PassGetAllOptions {
     limit?: number;
@@ -68,7 +78,7 @@ export class PassController {
      */
     async getPassById(passId: number): Promise<PassModel | LogError> {
         if (passId === undefined)
-            return new LogError({numError:400, text:"There is no pass id"});
+            return new LogError({numError: 400, text: "There is no pass id"});
 
         const res = await this.connection.query(`SELECT pass_id, date_hour_purchase, date_hour_peremption, pass_type_id, user_id 
                                                     FROM PASS where pass_id = ${passId}`);
@@ -86,7 +96,7 @@ export class PassController {
                 });
             }
         }
-        return new LogError({numError:404, text:"Pass not found"});
+        return new LogError({numError: 404, text: "Pass not found"});
     }
 
     /**
@@ -131,10 +141,10 @@ export class PassController {
             if (headers.affectedRows === 1) {
                 return this.getPassById(options.passId);
             }
-            return new LogError({numError:400,text:"The pass update failed"});
+            return new LogError({numError: 400, text: "The pass update failed"});
         } catch (err) {
             console.error(err);
-            return new LogError({numError:400,text:"The pass update failed"});
+            return new LogError({numError: 400, text: "The pass update failed"});
         }
     }
 
@@ -159,10 +169,10 @@ export class PassController {
             if (headers.affectedRows === 1) {
                 return this.getPassById(options.passId);
             }
-            return new LogError({numError:400,text:"Couldn't buy pass"});
+            return new LogError({numError: 400, text: "Couldn't buy pass"});
         } catch (err) {
             console.error(err);
-            return new LogError({numError:400,text:"Couldn't buy pass"});
+            return new LogError({numError: 400, text: "Couldn't buy pass"});
         }
     }
 
@@ -206,7 +216,7 @@ export class PassController {
      * @param options
      */
     async usePassForUserAtActualDate(options: IUsePassUserDateModelProps): Promise<UsePassUserDateModel | null> {
-        if(options.passId === undefined) {
+        if (options.passId === undefined) {
             return null;
         }
         const actualDate = new Date(DateUtils.getCurrentTimeStamp());
@@ -230,4 +240,115 @@ export class PassController {
         }
     }
 
+    /**
+     * Visite un espace avec un Pass
+     * @param options
+     */
+    async usePassInSpaceForUser(options: VisitSpacePassHourModel): Promise<VisitSpacePassHourModel | LogError> {
+        if (options.pass_id === undefined || options.space_id === undefined) {
+            return new LogError({numError: 400, text: "passId and spaceId should be specified"});
+        }
+        if(!await SpaceController.doesSpaceExist(options.space_id,this.connection))
+            return new LogError({numError:404,text:"this spaceId doesn't exist"});
+
+        // si besoin, va update la date de fin de la dernière visite de l'utilisateur avant d'en créer une nouvelle
+        await this.updateLastVisitFrom(options);
+
+        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
+        try {
+            const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
+            await this.connection.execute("INSERT INTO DATE_HOUR (date_hour) VALUES (?)", [
+                actualDateString
+            ]);
+            // Ajoute la visite
+            const res = await this.connection.execute("INSERT INTO VISIT_SPACE_PASS_HOUR (pass_id,date_hour_enter, space_id) VALUES (?, ?,?)", [
+                options.pass_id,
+                actualDateString,
+                options.space_id
+            ]);
+            const headers = res[0] as ResultSetHeader;
+            if (headers.affectedRows === 1) {
+                return this.getLastVisitFrom(options);
+            }
+            return new LogError({numError: 400, text: "Visit failed"});
+        } catch (err) {
+            console.error(err);
+            return new LogError({numError: 400, text: "Visit failed"});
+        }
+    }
+
+    /**
+     * Retourn la dernière visite en fonction du pass et de l'espace
+     * @param options
+     */
+    async getLastVisitFrom(options: IVisitSpacePassHourModelProps): Promise<VisitSpacePassHourModel | LogError> {
+        if (options.pass_id === undefined || options.space_id === undefined) {
+            return new LogError({numError: 400, text: "passId and spaceId should be specified"});
+        }
+
+        const res = await this.connection.query(`SELECT pass_id, date_hour_enter, space_id, date_hour_exit
+                                                    FROM VISIT_SPACE_PASS_HOUR where pass_id = ${options.pass_id} AND space_id = ${options.space_id} ORDER BY date_hour_enter DESC LIMIT 1`);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                return new VisitSpacePassHourModel({
+                    pass_id: Number.parseInt(row["pass_id"]),
+                    date_hour_enter: row["date_hour_enter"],
+                    space_id: row["space_id"],
+                    date_hour_exit: row["date_hour_exit"]
+                });
+            }
+        }
+        return new LogError({numError: 404, text: "Visit not found"});
+    }
+
+    /**
+     * Update le champ date_hour_exit de la dernière visite par l'heure actuelle
+     * @param options
+     */
+    async updateLastVisitFrom(options: IVisitSpacePassHourModelProps): Promise<boolean> {
+        if (options.pass_id === undefined) {
+            return false;
+        }
+
+        const resLastSpaceVisited = await this.connection.query(`SELECT pass_id, date_hour_enter, space_id, date_hour_exit
+                                                    FROM VISIT_SPACE_PASS_HOUR where pass_id = ${options.pass_id} AND date_hour_exit IS NULL ORDER BY date_hour_enter DESC LIMIT 1`);
+        const data = resLastSpaceVisited[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                const actualDate = new Date(DateUtils.getCurrentTimeStamp());
+                try {
+                    const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
+                    const lastSpaceVisted = new VisitSpacePassHourModel({
+                        pass_id: Number.parseInt(row["pass_id"]),
+                        date_hour_enter: row["date_hour_enter"],
+                        space_id: row["space_id"],
+                        date_hour_exit: row["date_hour_exit"]
+                    });
+
+                    const res = await this.connection.execute(`UPDATE VISIT_SPACE_PASS_HOUR SET date_hour_exit = ? WHERE pass_id = ? AND date_hour_enter = ? AND SPACE_ID = ? `, [
+                        actualDateString,
+                        lastSpaceVisted.pass_id,
+                        lastSpaceVisted.date_hour_enter,
+                        lastSpaceVisted.space_id
+                    ]);
+                    const headers = res[0] as ResultSetHeader;
+                    return headers.affectedRows === 1;
+
+                }
+                catch (err) {
+                    console.log(err);
+                    return false;
+                }
+            }
+            return false;
+        }
+        return false;
+    }
 }
+
+
