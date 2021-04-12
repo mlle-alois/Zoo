@@ -15,7 +15,7 @@ export class PassModel implements IPassProps {
 
     constructor(props: IPassProps) {
         this.passId = props.passId;
-        this.dateHourPurchase= props?.dateHourPurchase;
+        this.dateHourPurchase = props?.dateHourPurchase;
         this.dateHourPeremption = props?.dateHourPeremption;
         this.passTypeId = props?.passTypeId;
         this.userId = props?.userId;

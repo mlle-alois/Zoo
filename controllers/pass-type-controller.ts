@@ -246,7 +246,10 @@ export class PassTypeController {
      * Savoir si un type de billet est escape game via son :
      * @param passTypeId
      */
-    async isEscapeGamePassType(passTypeId: number): Promise<boolean> {
+    async isEscapeGamePassType(passTypeId: number | undefined): Promise<boolean> {
+        if(passTypeId === undefined) {
+            return false;
+        }
         const res = await this.connection.query('SELECT COUNT(*) as isEscapeGame FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%ESCAPE%GAME%\' AND pass_type_id = ?', [passTypeId]);
         const data = res[0];
         if (Array.isArray(data)) {
@@ -257,6 +260,102 @@ export class PassTypeController {
                     return false;
                 } else {
                     return (Number.parseInt(row["isEscapeGame"]) > 0);
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Savoir si un type de billet est UNIQUE DAY via son :
+     * @param passTypeId
+     */
+    async isUniqueDayPassType(passTypeId: number | undefined): Promise<boolean> {
+        if(passTypeId === undefined) {
+            return false;
+        }
+        const res = await this.connection.query('SELECT COUNT(*) as isUniqueDay FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%UNIQUE%DAY%\' AND pass_type_id = ?', [passTypeId]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                if (row["isUniqueDay"] === null) {
+                    return false;
+                } else {
+                    return (Number.parseInt(row["isUniqueDay"]) > 0);
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Savoir si un type de billet est WEEK END via son :
+     * @param passTypeId
+     */
+    async isWeekEndPassType(passTypeId: number | undefined): Promise<boolean> {
+        if (passTypeId === undefined) {
+            return false;
+        }
+        const res = await this.connection.query('SELECT COUNT(*) as isWeekEnd FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%WEEK%END%\' AND pass_type_id = ?', [passTypeId]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                if (row["isWeekEnd"] === null) {
+                    return false;
+                } else {
+                    return (Number.parseInt(row["isWeekEnd"]) > 0);
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Savoir si un type de billet est 1 DAY PER MONTH via son :
+     * @param passTypeId
+     */
+    async is1DayPerMonthPassType(passTypeId: number | undefined): Promise<boolean> {
+        if(passTypeId === undefined) {
+            return false;
+        }
+        const res = await this.connection.query('SELECT COUNT(*) as is1DayPerMonth FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%1%DAY%PER%MONTH%\' AND pass_type_id = ?', [passTypeId]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                if (row["is1DayPerMonth"] === null) {
+                    return false;
+                } else {
+                    return (Number.parseInt(row["is1DayPerMonth"]) > 0);
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Savoir si un type de billet est NIGHT via son :
+     * @param passTypeId
+     */
+    async isNightPassType(passTypeId: number | undefined): Promise<boolean> {
+        if(passTypeId === undefined) {
+            return false;
+        }
+        const res = await this.connection.query('SELECT COUNT(*) as isNight FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%NIGHT%\' AND pass_type_id = ?', [passTypeId]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                if (row["isNight"] === null) {
+                    return false;
+                } else {
+                    return (Number.parseInt(row["isNight"]) > 0);
                 }
             }
         }
