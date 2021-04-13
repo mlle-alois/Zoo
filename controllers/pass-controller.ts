@@ -276,8 +276,7 @@ export class PassController {
         }
         //pass 1 day per month utilisable une seule fois dans le mois, vérifier qu'il n'a pas encore été utilisé ce mois
         else if (await passTypeConstroller.is1DayPerMonthPassType(pass.passTypeId)) {
-            const firstDayOfMonthDateString = DateUtils.convertDateToISOString(new Date(DateUtils.getCurrentDate().getFullYear(), DateUtils.getCurrentDate().getMonth(), 1));
-            console.log(firstDayOfMonthDateString)
+            const firstDayOfMonthDateString = DateUtils.convertDateToISOString(new Date(DateUtils.getCurrentDate().getFullYear(), DateUtils.getCurrentDate().getMonth(), 1, 2));
             const passWasUsedToday = await this.connection.query(`SELECT *
                                                                   FROM USE_PASS_DATE
                                                                   WHERE pass_id = ?
