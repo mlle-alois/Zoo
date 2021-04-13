@@ -47,7 +47,6 @@ export async function getUserIdConnected(req: express.Request): Promise<number |
     if (token !== "") {
         const connection = await DatabaseUtils.getConnection();
         const sessionController = new SessionController(connection);
-        const userController = new UserController(connection);
         const session = await sessionController.getSessionByToken(token);
         if (session !== null) {
             return session.userId;

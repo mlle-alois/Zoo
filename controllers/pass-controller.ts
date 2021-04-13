@@ -9,6 +9,8 @@ import {
 } from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {DateUtils} from "../Utils";
+import {PassTypeController} from "./pass-type-controller";
+import {SATURDAY, SUNDAY} from "../consts";
 import {SpaceController} from "./space-controller";
 
 
@@ -180,7 +182,7 @@ export class PassController {
      * Vrai si le billet existe
      * @param passId
      */
-    async doesPassExist(passId: number) {
+    async doesPassExist(passId: number): Promise<boolean> {
         const isTreatmentValid = await this.connection.query(`SELECT pass_id FROM PASS WHERE pass_id = ${passId}`);
         const result = isTreatmentValid[0] as RowDataPacket[];
         return result.length > 0;
@@ -191,9 +193,11 @@ export class PassController {
      * @param passId
      * @param actualDate
      */
-    async getUseByDateHourAndPassId(passId: number, actualDate: string): Promise<UsePassUserDateModel | null> {
+    async getUseByDateHourAndPassId(passId: number, actualDate: string): Promise<UsePassUserDateModel | LogError> {
         const res = await this.connection.query(`SELECT pass_id, date_hour
-                                                    FROM USE_PASS_DATE WHERE date_hour = ? AND pass_id = ?`, [
+                                                 FROM USE_PASS_DATE
+                                                 WHERE date_hour = ?
+                                                   AND pass_id = ?`, [
             actualDate,
             passId
         ]);
@@ -208,35 +212,147 @@ export class PassController {
                 });
             }
         }
-        return null;
+        return new LogError({numError: 404, text: "Use not found"});
+    }
+
+    /**
+     * Vrai si le billet a déjà été utilisé aujourd'hui
+     * @param options
+     */
+    async passWasUsedToday(options: IUsePassUserDateModelProps): Promise<boolean> {
+        const date = DateUtils.convertDateToISOString(options.dateHour).split(" ")[0] + "%";
+        const passWasUsedToday = await this.connection.query(`SELECT pass_id
+                                                              FROM USE_PASS_DATE
+                                                              WHERE pass_id = ?
+                                                                AND date_hour LIKE ?`, [
+            options.passId,
+            date
+        ]);
+        const result = passWasUsedToday[0] as RowDataPacket[];
+        return result.length > 0;
+    }
+
+    /**
+     * Vrai si le billet a expiré
+     * @param passId
+     * @param actualDateHour
+     */
+    async passIsExpired(passId: number, actualDateHour: string): Promise<boolean> {
+        const passWasUsedToday = await this.connection.query(`SELECT pass_id
+                                                              FROM PASS
+                                                              WHERE pass_id = ?
+                                                                AND date_hour_peremption < ?`, [
+            passId,
+            actualDateHour
+        ]);
+        const result = passWasUsedToday[0] as RowDataPacket[];
+        return result.length > 0;
+    }
+
+    /**
+     * Vrai si le billet est utilisable aujourd'hui
+     * @param options
+     */
+    async isUsedInAValidDay(options: IUsePassUserDateModelProps): Promise<boolean> {
+        const passTypeConstroller = new PassTypeController(this.connection);
+        const pass = await this.getPassById(options.passId);
+        if (pass instanceof LogError) {
+            return false;
+        }
+        //vérifier que l'utilisation du pass night est après 18h
+        if (await passTypeConstroller.isNightPassType(pass.passTypeId)) {
+            if (DateUtils.getCurrentDate().getHours() >= 18) {
+                return true;
+            }
+        }
+        //pass journée/ESCAPE GAME utilisable une seule fois (vérifier qu'il n'a pas encore été utilisé)
+        if (await passTypeConstroller.isEscapeGamePassType(pass.passTypeId) ||
+            await passTypeConstroller.isUniqueDayPassType(pass.passTypeId) ||
+            await passTypeConstroller.isNightPassType(pass.passTypeId)) {
+            const passWasUsedToday = await this.connection.query(`SELECT *
+                                                                  FROM USE_PASS_DATE
+                                                                  WHERE pass_id = ?`, [
+                options.passId
+            ]);
+            const result = passWasUsedToday[0] as RowDataPacket[];
+            return result.length === 0;
+        }
+        //pass week-end utilisable uniquement en week-end
+        else if (await passTypeConstroller.isWeekEndPassType(pass.passTypeId)) {
+            //TODO le jour est bien récupéré ?
+            if (DateUtils.getCurrentDate().getDay() === SATURDAY || DateUtils.getCurrentDate().getDay() === SUNDAY) {
+                return true;
+            }
+        }
+        //pass 1 day per month utilisable une seule fois dans le mois, vérifier qu'il n'a pas encore été utilisé ce mois
+        else if (await passTypeConstroller.is1DayPerMonthPassType(pass.passTypeId)) {
+            const firstDayOfMonthDateString = DateUtils.convertDateToISOString(new Date(DateUtils.getCurrentDate().getFullYear(), DateUtils.getCurrentDate().getMonth(), 1, 2));
+            const passWasUsedToday = await this.connection.query(`SELECT *
+                                                                  FROM USE_PASS_DATE
+                                                                  WHERE pass_id = ?
+                                                                    AND date_hour >= ?`, [
+                options.passId,
+                firstDayOfMonthDateString
+            ]);
+            const result = passWasUsedToday[0] as RowDataPacket[];
+            return result.length === 0;
+        }
+        return false;
     }
 
     /**
      * Validation d'un billet à l'entrée du parc à une date (la date actuelle)
-     * @param options
+     * @param passId
+     * @param userId
      */
+    async usePassForUserAtActualDate(passId: number, userId: number | undefined): Promise<UsePassUserDateModel | LogError> {
+        if (userId === undefined)
+            return new LogError({numError: 400, text: "There is no user connected"})
+
+        //vérification que le billet existe
+        const pass = await this.getPassById(passId);
+        if (pass instanceof LogError) {
+            return pass;
+        }
+        //vérification que l'utilisateur connecté est le propriétaire du billet
+        if (pass.userId !== userId) {
+            return new LogError({numError: 403, text: "It's not your pass"});
+
     async usePassForUserAtActualDate(options: IUsePassUserDateModelProps): Promise<UsePassUserDateModel | null> {
         if (options.passId === undefined) {
             return null;
         }
         const actualDate = new Date(DateUtils.getCurrentTimeStamp());
         try {
-            const actualDateString = ((actualDate.toISOString().replace("T", " ")).split("."))[0];
+            const actualDateString = DateUtils.convertDateToISOString(actualDate);
+            //vérification que le pass est valide
+            if (await this.passIsExpired(passId, actualDateString)) {
+                return new LogError({numError: 409, text: "Pass is expired"})
+            }
+            //vérification que le pass est utilisable aujourd'hui
+            if (!await this.isUsedInAValidDay({passId, dateHour: actualDate})) {
+                return new LogError({numError: 409, text: "Pass can't be used"});
+            }
+            //vérification que le pass n'a pas encore été utilisé dans la journée
+            if (await this.passWasUsedToday({passId, dateHour: actualDate})) {
+                return new LogError({numError: 409, text: "Pass was already used today"})
+            }
+
             await this.connection.execute("INSERT INTO DATE_HOUR (date_hour) VALUES (?)", [
                 actualDateString
             ]);
             const res = await this.connection.execute("INSERT INTO USE_PASS_DATE (pass_id, date_hour) VALUES (?, ?)", [
-                options.passId,
+                passId,
                 actualDateString
             ]);
             const headers = res[0] as ResultSetHeader;
-            if (headers.affectedRows === 1 && options.passId !== undefined) {
-                return this.getUseByDateHourAndPassId(options.passId, actualDateString);
+            if (headers.affectedRows === 1) {
+                return this.getUseByDateHourAndPassId(passId, actualDateString);
             }
-            return null;
+            return new LogError({numError: 400, text: "Couldn't use pass"});
         } catch (err) {
             console.error(err);
-            return null;
+            return new LogError({numError: 400, text: "Couldn't use pass"});
         }
     }
 
