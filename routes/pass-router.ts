@@ -195,6 +195,36 @@ passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
         res.status(400).end();
     }
 });
+/**
+ * Visite d'un espace
+ * URL : /zoo/pass/visit?passId=X&spaceId=X
+ * Requete : POST
+ * ACCES : Tout le monde
+ * Nécessite d'être connecté : OUI
+ */
+passRouter.post("/visit", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    const connection = await DatabaseUtils.getConnection();
+    const passController = new PassController(connection);
+
+    const passId = Number.parseInt(req.query.passId as string);
+    const spaceId = Number.parseInt(req.query.spaceId as string);
+    const userId = await getUserIdConnected(req);
+    //toutes les informations sont obligatoires
+    if (userId === undefined) {
+        res.status(400).end();
+        return;
+    }
+    const visit = await passController.usePassInSpaceForUser({pass_id:passId,space_id:spaceId})
+
+    if (visit instanceof LogError) {
+        LogError.HandleStatus(res, visit);
+        return;
+    }
+    res.json(visit);
+
+
+});
 
 /**
  * utiliser un billet pour l'utilisateur connecté (validation à l'entrée du parc)
