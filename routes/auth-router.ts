@@ -44,9 +44,13 @@ authRouter.post("/subscribe", async function (req, res) {
         phoneNumber,
         typeId
     });
+    if (user === null){
+        res.status(400).end();
+        return;
+    }
     //connexion de l'utilisateur
     const session = await authController.login(mail, password);
-    if (user !== null && session !== null) {
+    if (session !== null) {
         res.status(201);
         res.json({user, session});
     } else {
