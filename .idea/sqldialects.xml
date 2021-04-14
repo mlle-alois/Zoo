@@ -2,5 +2,6 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/controllers/pass-controller.ts" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/controllers/pass-type-controller.ts" dialect="GenericSQL" />
   </component>
 </project>
