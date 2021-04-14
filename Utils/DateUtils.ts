@@ -10,7 +10,7 @@ export class DateUtils {
     }
 
     /**
-     * Ajoute x jours à la date entrée en paramètre
+     * Ajoute x heures à la date entrée en paramètre
      * @param date
      * @param hours
      */
