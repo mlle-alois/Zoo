@@ -1,6 +1,7 @@
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {UserController} from "./user-controller";
-import {SessionModel} from "../models";
+import {LogError, SessionModel} from "../models";
+import {DateUtils} from "../Utils";
 
 export class SessionController {
 
@@ -39,6 +40,7 @@ export class SessionController {
      */
     async getSessionByToken(token: string): Promise<SessionModel | null> {
         //récupération de la session
+        
         const res = await this.connection.query(`SELECT session_id, token, createdAt, updatedAt, deletedAt, user_id 
                                                     FROM SESSION where token = ? `, [
             token
@@ -117,6 +119,63 @@ export class SessionController {
         } catch (err) {
             console.error(err);
             return false;
+        }
+    }
+    /**
+     * Récupération d'une session en ajoutant 2 heure d'un le token
+     * A utiliser si on veut effectuer le controle d'expiration du token en base
+     * @param token
+     */
+    async getLastUpdatedTimePlus2Hours(token: string): Promise<string | undefined> {
+        //récupération de la session
+
+        const res = await this.connection.query(`SELECT updatedAt + INTERVAL '2' HOUR 
+                                                    FROM SESSION where token = ? `, [
+            token
+        ]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+             return row["updatedAt + INTERVAL '2' HOUR"];
+
+            }
+        }
+    }
+
+    /**
+     * Vrai s'il le token à dépasser le nombre d'heure autorisées
+     * @param session
+     * @param hours
+     * @constructor
+     */
+    IsTokenExpired(session:SessionModel,hours:number):boolean{
+        let actualDate = new Date();
+        DateUtils.addXHoursToDate(session.updatedAt,hours);
+        return actualDate > session.updatedAt;
+    }
+
+    /**
+     * Met à jour le champ updatedAt de la dernière session
+     * @param options
+     */
+    async updateSession(options: SessionModel): Promise<SessionModel | LogError | null> {
+
+        try {
+            let actualDate = new Date();
+            const res = await this.connection.execute(`UPDATE SESSION SET updatedAt = ? WHERE token = ?`, [
+                actualDate,
+                options.token
+            ]);
+            const headers = res[0] as ResultSetHeader;
+            if (headers.affectedRows === 1) {
+                return this.getSessionByToken(<string>options.token);
+            }
+            return new LogError({numError:400,text:"The pass update failed"});
+        } catch (err) {
+            console.error(err);
+            return new LogError({numError:400,text:"The pass update failed"});
         }
     }
 
