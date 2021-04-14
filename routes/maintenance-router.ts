@@ -25,7 +25,11 @@ maintenanceRouter.get("/", authUserMiddleWare, async function (req, res) {
             limit,
             offset
         });
-        res.json(maintenanceList);
+        if (maintenanceList instanceof LogError) {
+            LogError.HandleStatus(res, maintenanceList);
+        } else {
+            res.json(maintenanceList);
+        }
     }
     LogError.HandleStatus(res, {
         numError: 403,
@@ -50,8 +54,8 @@ maintenanceRouter.get("/:query",authUserMiddleWare, async function (req, res) {
             //récupération de l'animal
             const maintenance = await maintenanceController.getMaintenanceById(
                 Number.parseInt(req.params.query.substring(searchParams[0].length)));
-            if (maintenance === null) {
-                res.status(404).end();
+            if (maintenance instanceof LogError) {
+                LogError.HandleStatus(res, maintenance);
             } else {
                 res.json(maintenance);
             }
@@ -59,8 +63,8 @@ maintenanceRouter.get("/:query",authUserMiddleWare, async function (req, res) {
         if (req.params.query.match(searchParams[1])) {
             const maintenanceList = await maintenanceController.getMaintenanceBySpace(
                 req.params.query.substring(searchParams[1].length));
-            if (maintenanceList === null) {
-                res.status(404).end();
+            if (maintenanceList instanceof LogError) {
+                res.json(LogError.HandleStatus(res, maintenanceList));
             } else {
                 res.json(maintenanceList);
             }
@@ -68,14 +72,17 @@ maintenanceRouter.get("/:query",authUserMiddleWare, async function (req, res) {
         if (req.params.query.match(searchParams[2])) {
             const maintenanceList = await maintenanceController.getMaintenanceByManager(
                 req.params.query.substring(searchParams[2].length));
-            if (maintenanceList === null) {
-                res.status(404).end();
+            if (maintenanceList instanceof LogError) {
+                LogError.HandleStatus(res, maintenanceList);
             } else {
                 res.json(maintenanceList);
             }
         }
     }
-    res.status(403).end();
+    LogError.HandleStatus(res, {
+        numError: 403,
+        text: "Vous n'avez pas les droits d'accès"
+    });
 });
 
 /**
@@ -92,20 +99,25 @@ maintenanceRouter.put("/:id",authUserMiddleWare, async function (req, res) {
 
         //invalide s'il n'y a pas d'Id ou qu'aucune option à modifier n'est renseignée
         if (id === undefined) {
-            res.status(400).end();
-            return;
+            LogError.HandleStatus(res, {
+                numError: 400,
+                text: "Bad Request"
+            });
         }
         const connection = await DatabaseUtils.getConnection();
         const maintenanceController = new MaintenanceController(connection);
         //modification
         const maintenance = await maintenanceController.closeMaintenance(id);
-        if (maintenance === null) {
-            res.status(404);
+        if (maintenance instanceof LogError) {
+            LogError.HandleStatus(res, maintenance);
         } else {
             res.json(maintenance);
         }
     }
-    res.status(403).end();
+    LogError.HandleStatus(res, {
+        numError: 403,
+        text: "Vous n'avez pas les droits d'accès"
+    });
 });
 
 /**
@@ -124,12 +136,21 @@ maintenanceRouter.delete("/:id", authUserMiddleWare,async function (req, res) {
         const success = await maintenanceController.removeMaintenanceById(Number.parseInt(req.params.id));
         if (success) {
             // pas de contenu mais a fonctionné
-            res.status(204).end();
+            LogError.HandleStatus(res, {
+                numError: 200,
+                text: `Maintenance ${req.params.id} successfully deleted`
+            });
         } else {
-            res.status(404).end();
+            LogError.HandleStatus(res, {
+                numError: 404,
+                text: `Cannot delete maintenance ${req.params.id}`
+            });
         }
     }
-    res.status(403).end();
+    LogError.HandleStatus(res, {
+        numError: 403,
+        text: "Vous n'avez pas les droits d'accès"
+    });
 });
 
 /**
@@ -152,12 +173,8 @@ maintenanceRouter.post("/add", authUserMiddleWare,async function (req, res) {
         const managerId = Number.parseInt(req.body.managerId);
         //toutes les informations sont obligatoires
 
-        if ( dateHourStart === undefined ) {
-            res.status(400).end();
-            return;
-        }
         //Création d'une maintenance
-        if (spaceId !== undefined && managerId !== undefined) {
+        if (!isNaN(spaceId) && !isNaN(managerId)) {
             const maintenance = await maintenanceController.createMaintenance({
                 id,
                 dateHourStart,
@@ -165,17 +182,27 @@ maintenanceRouter.post("/add", authUserMiddleWare,async function (req, res) {
                 spaceId,
                 managerId
             });
-            if (maintenance !== null) {
+            if (maintenance instanceof LogError) {
+                LogError.HandleStatus(res, maintenance);
                 res.status(201);
-                res.json(maintenance);
             } else {
-                res.status(400).end();
+                res.json(maintenance);
+                LogError.HandleStatus(maintenance, {
+                    numError: 201,
+                    text: "Maintenance successfully created"
+                });
             }
         } else {
-            res.status(400).end();
+            LogError.HandleStatus(res, {
+                numError: 400,
+                text: "Bad Request"
+            });
         }
     }
-    res.status(403).end();
+    LogError.HandleStatus(res, {
+        numError: 403,
+        text: "Vous n'avez pas les droits d'accès"
+    });
 });
 
 export {

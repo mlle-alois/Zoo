@@ -19,7 +19,7 @@ export class MaintenanceController {
      * Récupération de toutes les maintenances
      * @param options -> Limit et offset de la requete
      */
-    async getAllMaintenance(options?: MaintenanceGetAllOptions): Promise<MaintenanceModel[]> {
+    async getAllMaintenance(options?: MaintenanceGetAllOptions): Promise<MaintenanceModel[] | LogError> {
         //récupération des options
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
@@ -37,7 +37,7 @@ export class MaintenanceController {
                 });
             });
         }
-        return [];
+        return new LogError({numError: 404, text: "No maintenance found"});
     }
 
     /**
@@ -80,8 +80,8 @@ export class MaintenanceController {
                 const row = rows[0];
                 return new MaintenanceModel({
                     id: Number.parseInt(row["maintenance_id"]),
-                    dateHourStart: row["date_hour_start"],
-                    dateHourEnd: row["date_hour_end"],
+                    dateHourStart: DateUtils.convertDateToISOString(row["date_hour_start"]),
+                    dateHourEnd: DateUtils.convertDateToISOString(row["date_hour_end"]),
                     spaceId: Number.parseInt(row["space_id"]),
                     managerId: Number.parseInt(row["manager_id"])
                 });
@@ -94,12 +94,12 @@ export class MaintenanceController {
      * Récupération des maintenances via :
      * @param space
      */
-    async getMaintenanceBySpace(space:string): Promise<MaintenanceModel[]> {
+    async getMaintenanceBySpace(space:string): Promise<MaintenanceModel[] | LogError> {
 
         const res = await this.connection.query(`SELECT maintenance_id, date_hour_start, date_hour_end, space_id, manager_id 
                                                     FROM MAINTENANCE where space_id = ${space}`);
         const data = res[0];
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length !== 0) {
             return (data as RowDataPacket[]).map(function (row: any) {
                 return new MaintenanceModel({
                     id: Number.parseInt(row["maintenance_id"]),
@@ -110,14 +110,14 @@ export class MaintenanceController {
                 });
             });
         }
-        return [];
+        return new LogError({numError:404,text:"No maintenance found"});
     }
 
     /**
      * Récupération des maintenances via :
      * @param manager
      */
-    async getMaintenanceByManager(manager:string): Promise<MaintenanceModel[]> {
+    async getMaintenanceByManager(manager:string): Promise<MaintenanceModel[] | LogError> {
 
         const res = await this.connection.query(`SELECT maintenance_id, date_hour_start, date_hour_end, space_id, manager_id 
                                                     FROM MAINTENANCE where manager_id = ${manager}`);
@@ -133,7 +133,7 @@ export class MaintenanceController {
                 });
             });
         }
-        return [];
+        return new LogError({numError:404,text:"No maintenance found"});
     }
 
     /**
@@ -149,15 +149,6 @@ export class MaintenanceController {
             console.error(err);
             return false;
         }
-    }
-
-    /**
-     * Déplace les animaux de l'enclos en maintenance à un enclos libre
-     * @param animalId
-     */
-    // TODO Finir cette fonction
-    async moveAnimals(animalId: number): Promise<void> {
-        const res = await this.connection.query(`UPDATE ANIMAL SET space_id = ${0} where animal_id = ${animalId}`);
     }
 
     /**
@@ -195,7 +186,6 @@ export class MaintenanceController {
         const date = new Date(DateUtils.getCurrentTimeStamp());
         const convertedDate = DateUtils.convertDateToISOString(date);
         try {
-            console.log(`UPDATE MAINTENANCE SET date_hour_end = "${convertedDate}" WHERE maintenance_id = ${maintenanceId}`)
             const res = await this.connection.execute(`UPDATE MAINTENANCE SET date_hour_end = "${convertedDate}" 
                                                             WHERE maintenance_id = ${maintenanceId}`);
             const headers = res[0] as ResultSetHeader;

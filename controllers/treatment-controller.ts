@@ -24,7 +24,7 @@ export class TreatmentController {
      * Récupération de tous les traitements
      * @param options -> Limit et offset de la requete
      */
-    async getAllTreatment(options?: TreatmentGetAllOptions): Promise<TreatmentModel[]> {
+    async getAllTreatment(options?: TreatmentGetAllOptions): Promise<TreatmentModel[] | LogError> {
         //récupération des options
         const limit = options?.limit || 20;
         const offset = options?.offset || 0;
