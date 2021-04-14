@@ -175,7 +175,7 @@ spaceRouter.post("/add", authUserMiddleWare, async function (req, res) {
 
 
 /**
- * ajout d'un espace
+ * ajout d'un media à l'espace
  * URL : /zoo/space/media/add
  * Requete : POST
  * ACCES : Tous sauf CLIENT
