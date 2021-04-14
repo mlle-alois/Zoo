@@ -279,7 +279,6 @@ export class PassController {
         }
         //pass week-end utilisable uniquement en week-end
         else if (await passTypeConstroller.isWeekEndPassType(pass.passTypeId)) {
-            //TODO le jour est bien récupéré ?
             if (DateUtils.getCurrentDate().getDay() === SATURDAY || DateUtils.getCurrentDate().getDay() === SUNDAY) {
                 return true;
             }
@@ -317,10 +316,6 @@ export class PassController {
         //vérification que l'utilisateur connecté est le propriétaire du billet
         if (pass.userId !== userId) {
             return new LogError({numError: 403, text: "It's not your pass"});
-
-    async usePassForUserAtActualDate(options: IUsePassUserDateModelProps): Promise<UsePassUserDateModel | null> {
-        if (options.passId === undefined) {
-            return null;
         }
         const actualDate = new Date(DateUtils.getCurrentTimeStamp());
         try {
@@ -364,8 +359,8 @@ export class PassController {
         if (options.pass_id === undefined || options.space_id === undefined) {
             return new LogError({numError: 400, text: "passId and spaceId should be specified"});
         }
-        if(!await SpaceController.doesSpaceExist(options.space_id,this.connection))
-            return new LogError({numError:404,text:"this spaceId doesn't exist"});
+        if (!await SpaceController.doesSpaceExist(options.space_id, this.connection))
+            return new LogError({numError: 404, text: "this spaceId doesn't exist"});
 
         // si besoin, va update la date de fin de la dernière visite de l'utilisateur avant d'en créer une nouvelle
         await this.updateLastVisitFrom(options);
@@ -446,17 +441,21 @@ export class PassController {
                         date_hour_exit: row["date_hour_exit"]
                     });
 
-                    const res = await this.connection.execute(`UPDATE VISIT_SPACE_PASS_HOUR SET date_hour_exit = ? WHERE pass_id = ? AND date_hour_enter = ? AND SPACE_ID = ? `, [
-                        actualDateString,
-                        lastSpaceVisted.pass_id,
-                        lastSpaceVisted.date_hour_enter,
-                        lastSpaceVisted.space_id
-                    ]);
+                    const res = await this.connection.execute(`UPDATE VISIT_SPACE_PASS_HOUR
+                                                               SET date_hour_exit = ?
+                                                               WHERE pass_id = ?
+                                                                 AND date_hour_enter = ?
+                                                                 AND SPACE_ID = ? `,
+                        [
+                            actualDateString,
+                            lastSpaceVisted.pass_id,
+                            lastSpaceVisted.date_hour_enter,
+                            lastSpaceVisted.space_id
+                        ]);
                     const headers = res[0] as ResultSetHeader;
                     return headers.affectedRows === 1;
 
-                }
-                catch (err) {
+                } catch (err) {
                     console.log(err);
                     return false;
                 }
