@@ -197,9 +197,10 @@ export class SpaceController {
     /**
      * Vrai si l'espace existe
      * @param spaceId
+     * @param connection
      */
-    async doesSpaceExist(spaceId: number): Promise<boolean> {
-        const isTreatmentValid = await this.connection.query(`SELECT space_id FROM SPACE WHERE space_id = ${spaceId}`);
+    public static async  doesSpaceExist(spaceId: number,connection:Connection): Promise<boolean> {
+        const isTreatmentValid = await connection.query(`SELECT space_id FROM SPACE WHERE space_id = ${spaceId}`);
         const result = isTreatmentValid[0] as RowDataPacket[];
         return result.length > 0;
     }
@@ -212,7 +213,7 @@ export class SpaceController {
         if (options.space_id  === undefined || options.media_id === undefined) {
             return new LogError({numError:400,text:"Enter a mediaId and a spaceId"});
         }
-        if(!await this.doesSpaceExist(options.space_id)){
+        if(!await SpaceController.doesSpaceExist(options.space_id,this.connection)){
             return new LogError({numError:404,text:"this spaceId doesn't exist"});
         }
         if(!await MediaController.doesMediaExist(options.media_id,this.connection)){
@@ -274,7 +275,7 @@ export class SpaceController {
         if (spaceId === undefined)
             return new LogError({numError:400,text:"There is no spaceId"});
 
-        if(!await this.doesSpaceExist(spaceId)){
+        if(!await SpaceController.doesSpaceExist(spaceId,this.connection)){
             return new LogError({numError:404,text:"this spaceId doesn't exist"});
         }
 
@@ -311,7 +312,7 @@ export class SpaceController {
         if (spaceId  === undefined || mediaId === undefined) {
             return new LogError({numError:400,text:"Enter a mediaId and a spaceId"});
         }
-        if(!await this.doesSpaceExist(spaceId)){
+        if(!await SpaceController.doesSpaceExist(spaceId,this.connection)){
             return new LogError({numError:404,text:"this spaceId doesn't exist"});
         }
         if(!await MediaController.doesMediaExist(mediaId,this.connection)){
