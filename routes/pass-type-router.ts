@@ -158,7 +158,7 @@ passTypeRouter.post("/add", authUserMiddleWare, async function (req, res) {
 //TODO faire get all access, get access for pass id, get access for space id
 /**
  * donner à un type de billet l'accès à un espace
- * URL : /zoo/pass-type/give-access?passTypeId={x}&spaceId={x}[&order={x}]
+ * URL : /zoo/pass-type/give-access?passTypeId={x}&spaceId={x}
  * Requete : POST
  * ACCES : ADMIN
  * Nécessite d'être connecté : OUI
@@ -171,7 +171,6 @@ passTypeRouter.post("/give-access", authUserMiddleWare, async function (req, res
 
         const passTypeId = Number.parseInt(req.query.passTypeId as string);
         const spaceId = Number.parseInt(req.query.spaceId as string);
-        let numOrderAccess: number | undefined = Number.parseInt(req.query.order as string);
         //informations obligatoires
         if (passTypeId === undefined || isNaN(passTypeId) || spaceId === undefined || isNaN(spaceId)) {
             res.status(400).end();
@@ -179,8 +178,7 @@ passTypeRouter.post("/give-access", authUserMiddleWare, async function (req, res
         }
         const passType = await passTypeController.createAccessForPassTypeAtSpace({
             passTypeId,
-            spaceId,
-            numOrderAccess
+            spaceId
         });
 
         if (passType instanceof LogError) {

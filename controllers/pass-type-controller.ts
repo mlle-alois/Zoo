@@ -72,7 +72,7 @@ export class PassTypeController {
      */
     async getPassTypeById(passTypeId: number): Promise<PassTypeModel | LogError> {
         if (passTypeId === undefined)
-            return new LogError({numError:400, text:"There is no pass type id"});
+            return new LogError({numError: 400, text: "There is no pass type id"});
 
         const res = await this.connection.query(`SELECT pass_type_id, pass_type_name, pass_type_price, pass_type_is_available 
                                                     FROM PASS_TYPE where pass_type_id = ${passTypeId}`);
@@ -89,7 +89,7 @@ export class PassTypeController {
                 });
             }
         }
-        return new LogError({numError:404, text:"Pass type not found"});
+        return new LogError({numError: 404, text: "Pass type not found"});
     }
 
     /**
@@ -99,10 +99,12 @@ export class PassTypeController {
      */
     async getAccessByPassTypeIdAndSpaceId(passTypeId: number, spaceId: number): Promise<AccessPassSpaceModel | LogError> {
         if (passTypeId === undefined || spaceId === undefined)
-            return new LogError({numError:400, text:"There is no pass type id or no space id"});
+            return new LogError({numError: 400, text: "There is no pass type id or no space id"});
 
-        const res = await this.connection.query(`SELECT pass_type_id, space_id, num_order_access 
-                                                    FROM GIVE_ACCESS_PASS_TYPE_SPACE WHERE pass_type_id = ? AND space_id = ?`, [
+        const res = await this.connection.query(`SELECT pass_type_id, space_id, num_order_access
+                                                 FROM GIVE_ACCESS_PASS_TYPE_SPACE
+                                                 WHERE pass_type_id = ?
+                                                   AND space_id = ?`, [
             passTypeId,
             spaceId
         ]);
@@ -118,7 +120,7 @@ export class PassTypeController {
                 });
             }
         }
-        return new LogError({numError:404, text:"Access not found"});
+        return new LogError({numError: 404, text: "Access not found"});
     }
 
     /**
@@ -163,10 +165,10 @@ export class PassTypeController {
             if (headers.affectedRows === 1) {
                 return this.getPassTypeById(options.passTypeId);
             }
-            return new LogError({numError:400,text:"The pass type update failed"});
+            return new LogError({numError: 400, text: "The pass type update failed"});
         } catch (err) {
             console.error(err);
-            return new LogError({numError:400,text:"The pass type update failed"});
+            return new LogError({numError: 400, text: "The pass type update failed"});
         }
     }
 
@@ -186,11 +188,37 @@ export class PassTypeController {
             if (headers.affectedRows === 1) {
                 return this.getPassTypeById(options.passTypeId);
             }
-            return new LogError({numError:400,text:"Couldn't create pass type"});
+            return new LogError({numError: 400, text: "Couldn't create pass type"});
         } catch (err) {
             console.error(err);
-            return new LogError({numError:400,text:"Couldn't create pass type"});
+            return new LogError({numError: 400, text: "Couldn't create pass type"});
         }
+    }
+
+    /**
+     * Récupération de l'ordre d'accès à l'espace pour le pass maximum existant
+     * Utile pour l'incrémentation manuelle
+     * @param passTypeId
+     * @param spaceId
+     */
+    async getMaxOrderByPassTypeIdAndSpaceId(passTypeId: number, spaceId: number): Promise<number> {
+        const res = await this.connection.query('SELECT MAX(num_order_access) as maxOrder FROM GIVE_ACCESS_PASS_TYPE_SPACE WHERE pass_type_id = ? AND space_id = ?', [
+            passTypeId,
+            spaceId
+        ]);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                if (row["maxOrder"] === null) {
+                    return 0;
+                } else {
+                    return row["maxOrder"];
+                }
+            }
+        }
+        return 0;
     }
 
     /**
@@ -201,40 +229,41 @@ export class PassTypeController {
         const passTypeController = new PassTypeController(this.connection);
 
         //vérification que l'espace existe
-        if (!await SpaceController.doesSpaceExist(options.spaceId,this.connection)) {
+        if (!await SpaceController.doesSpaceExist(options.spaceId, this.connection)) {
             return new LogError({numError: 409, text: "L\'espace renseigné n\'existe pas"});
         }
         //vérification que le type de billet existe
         if (!await passTypeController.doesPassTypeExist(options.passTypeId)) {
             return new LogError({numError: 409, text: "Le type de billet renseigné n\'existe pas"});
         }
-        //numéro d'ordre obligatoire si le type de billet est un escape game
-        const isEscapeGame = await passTypeController.isEscapeGamePassType(options.passTypeId);
-        if (isEscapeGame) {
-            if (isNaN(options.numOrderAccess)) {
-                return new LogError({numError: 400, text: "Un numéro d\'ordre doit être renseigné"});
-            }
-        }
         //vérification si le type de billet a déjà accès à l'espace
         const passTypeAccess = await passTypeController.getAccessByPassTypeIdAndSpaceId(options.passTypeId, options.spaceId);
         if (!(passTypeAccess instanceof LogError)) {
-            return new LogError({numError: 409, text: "L\'accès à cet espace est déjà possible pour ce type de billet"});
+            return new LogError({
+                numError: 409,
+                text: "L\'accès à cet espace est déjà possible pour ce type de billet"
+            });
         }
-        const numOrderAccess = isEscapeGame ? null : options.numOrderAccess;
+        //numéro d'ordre récupéré si le billet est un escape game
+        if (await passTypeController.isEscapeGamePassType(options.passTypeId)) {
+            options.numOrderAccess = await this.getMaxOrderByPassTypeIdAndSpaceId(options.passTypeId, options.spaceId) + 1;
+        } else {
+            options.numOrderAccess = 0;
+        }
         try {
             const res = await this.connection.execute("INSERT INTO GIVE_ACCESS_PASS_TYPE_SPACE (pass_type_id, space_id, num_order_access) VALUES (?, ?, ?)", [
                 options.passTypeId,
                 options.spaceId,
-                numOrderAccess
+                options.numOrderAccess
             ]);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
                 return this.getAccessByPassTypeIdAndSpaceId(options.passTypeId, options.spaceId);
             }
-            return new LogError({numError:400,text:"Couldn't create access"});
+            return new LogError({numError: 400, text: "Couldn't create access"});
         } catch (err) {
             console.error(err);
-            return new LogError({numError:400,text:"Couldn't create access"});
+            return new LogError({numError: 400, text: "Couldn't create access"});
         }
     }
 
@@ -243,7 +272,7 @@ export class PassTypeController {
      * @param passTypeId
      */
     async isEscapeGamePassType(passTypeId: number | undefined): Promise<boolean> {
-        if(passTypeId === undefined) {
+        if (passTypeId === undefined) {
             return false;
         }
         const res = await this.connection.query('SELECT COUNT(*) as isEscapeGame FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%ESCAPE%GAME%\' AND pass_type_id = ?', [passTypeId]);
@@ -267,7 +296,7 @@ export class PassTypeController {
      * @param passTypeId
      */
     async isUniqueDayPassType(passTypeId: number | undefined): Promise<boolean> {
-        if(passTypeId === undefined) {
+        if (passTypeId === undefined) {
             return false;
         }
         const res = await this.connection.query('SELECT COUNT(*) as isUniqueDay FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%UNIQUE%DAY%\' AND pass_type_id = ?', [passTypeId]);
@@ -315,7 +344,7 @@ export class PassTypeController {
      * @param passTypeId
      */
     async is1DayPerMonthPassType(passTypeId: number | undefined): Promise<boolean> {
-        if(passTypeId === undefined) {
+        if (passTypeId === undefined) {
             return false;
         }
         const res = await this.connection.query('SELECT COUNT(*) as is1DayPerMonth FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%1%DAY%PER%MONTH%\' AND pass_type_id = ?', [passTypeId]);
@@ -339,7 +368,7 @@ export class PassTypeController {
      * @param passTypeId
      */
     async isNightPassType(passTypeId: number | undefined): Promise<boolean> {
-        if(passTypeId === undefined) {
+        if (passTypeId === undefined) {
             return false;
         }
         const res = await this.connection.query('SELECT COUNT(*) as isNight FROM PASS_TYPE WHERE UPPER(pass_type_name) LIKE \'%NIGHT%\' AND pass_type_id = ?', [passTypeId]);
