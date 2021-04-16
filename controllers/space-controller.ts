@@ -1,9 +1,9 @@
 import {
     AssociateSpaceMediaModel,
     IAssociateSpaceMediaProps,
-    ISpaceProps,
-    LogError,
-    SpaceModel
+    ISpaceProps, IVisitSpacePassHourModelProps,
+    LogError, PassModel,
+    SpaceModel, VisitSpacePassHourModel
 } from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {MediaController} from "./media-controller";
@@ -76,9 +76,9 @@ export class SpaceController {
      * Récupération d'un espace via :
      * @param spaceId
      */
-    async getSpaceById(spaceId: number | undefined): Promise<SpaceModel | null> {
+    async getSpaceById(spaceId: number | undefined): Promise<SpaceModel | LogError> {
         if (spaceId === undefined)
-            return null;
+            return new LogError({numError: 400, text: "There is no space id"});
 
         const res = await this.connection.query(`SELECT space_id, space_name, space_description, space_capacity, opening_time, closing_time, handicapped_access, space_type_id 
                                                     FROM SPACE where space_id = ${spaceId}`);
@@ -99,7 +99,7 @@ export class SpaceController {
                 });
             }
         }
-        return null;
+        return new LogError({numError: 404, text: "Space not found"});
     }
 
     /**
@@ -121,7 +121,7 @@ export class SpaceController {
      * Modification des informations d'un espace renseignées dans les options
      * @param options
      */
-    async updateSpace(options: ISpaceProps): Promise<SpaceModel | null> {
+    async updateSpace(options: ISpaceProps): Promise<SpaceModel | LogError> {
         const setClause: string[] = [];
         const params = [];
         //création des contenus de la requête dynamiquement
@@ -160,10 +160,10 @@ export class SpaceController {
             if (headers.affectedRows === 1) {
                 return this.getSpaceById(options.spaceId);
             }
-            return null;
+            return new LogError({numError: 400, text: "The space update failed"});
         } catch (err) {
             console.error(err);
-            return null;
+            return new LogError({numError: 400, text: "The space update failed"});
         }
     }
 
@@ -171,7 +171,7 @@ export class SpaceController {
      * création d'un espace
      * @param options
      */
-    async createSpace(options: ISpaceProps): Promise<SpaceModel | null> {
+    async createSpace(options: ISpaceProps): Promise<SpaceModel | LogError> {
         try {
             const res = await this.connection.execute("INSERT INTO SPACE (space_id, space_name, space_description, space_capacity, opening_time, closing_time, handicapped_access, space_type_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
                 options.spaceId,
@@ -187,10 +187,10 @@ export class SpaceController {
             if (headers.affectedRows === 1) {
                 return this.getSpaceById(options.spaceId);
             }
-            return null;
+            return new LogError({numError: 400, text: "Couldn't create pass"});
         } catch (err) {
             console.error(err);
-            return null;
+            return new LogError({numError: 400, text: "Couldn't create pass"});
         }
     }
 
@@ -326,6 +326,25 @@ export class SpaceController {
             console.error(err);
              return new LogError({numError:403,text:"Delete failed"});
         }
+    }
+
+    /**
+     * Vrai si le pass a déjà visité l'espace aujourd'hui
+     * @param pass
+     * @param space
+     */
+    async spaceWasVisitedByPassToday(pass: PassModel, space: SpaceModel): Promise<boolean> {
+        const res = await this.connection.query(`SELECT pass_id, date_hour_enter, space_id, date_hour_exit
+                                                    FROM VISIT_SPACE_PASS_HOUR 
+                                                    WHERE pass_id = ${pass.passId}
+                                                    AND space_id = ${space.spaceId}
+                                                    AND DAY(date_hour_enter) = DAY(NOW())
+                                                    AND MONTH(date_hour_enter) = MONTH(NOW())
+                                                    AND YEAR(date_hour_enter) = YEAR(NOW())
+                                                    ORDER BY date_hour_enter DESC 
+                                                    LIMIT 1`);
+        const data = res[0];
+        return (Array.isArray(data) && (data as RowDataPacket[]).length > 0);
     }
 
 }

@@ -51,10 +51,9 @@ export class MaintenanceController {
             const rows = data as RowDataPacket[];
             if (rows.length > 0) {
                 const row = rows[0];
-                if(row["maxId"] === null) {
+                if (row["maxId"] === null) {
                     return 0;
-                }
-                else {
+                } else {
                     return row["maxId"];
                 }
             }
@@ -68,8 +67,8 @@ export class MaintenanceController {
      */
     async getMaintenanceById(maintenanceId: number | undefined): Promise<MaintenanceModel | LogError> {
         //récupération de l'utilisateur
-        if(maintenanceId === undefined)
-            return new LogError({numError:400,text:"There is no maintenance id"});
+        if (maintenanceId === undefined)
+            return new LogError({numError: 400, text: "There is no maintenance id"});
 
         const res = await this.connection.query(`SELECT maintenance_id, date_hour_start, date_hour_end, space_id, manager_id
                                                     FROM MAINTENANCE where maintenance_id = ${maintenanceId}`);
@@ -87,14 +86,14 @@ export class MaintenanceController {
                 });
             }
         }
-        return new LogError({numError:404,text:"Maintenance not found"});
+        return new LogError({numError: 404, text: "Maintenance not found"});
     }
 
     /**
      * Récupération des maintenances via :
      * @param space
      */
-    async getMaintenanceBySpace(space:string): Promise<MaintenanceModel[] | LogError> {
+    async getMaintenanceBySpace(space: string): Promise<MaintenanceModel[] | LogError> {
 
         const res = await this.connection.query(`SELECT maintenance_id, date_hour_start, date_hour_end, space_id, manager_id 
                                                     FROM MAINTENANCE where space_id = ${space}`);
@@ -110,7 +109,7 @@ export class MaintenanceController {
                 });
             });
         }
-        return new LogError({numError:404,text:"No maintenance found"});
+        return new LogError({numError: 404, text: "No maintenance found"});
     }
 
     /**
@@ -119,13 +118,12 @@ export class MaintenanceController {
      */
     async isSpaceAvailable(space: number): Promise<boolean> {
 
-        const res = await this.connection.query(`SELECT * FROM MAINTENANCE WHERE date_hour_start = date_hour_end 
+        const res = await this.connection.query(`SELECT * FROM MAINTENANCE 
+                                                    WHERE date_hour_start < NOW()
+                                                    AND date_hour_end > NOW()
                                                     AND space_id = ${space}`);
         const data = res[0];
-        if (Array.isArray(data) && data.length !== 0) {
-            return false;
-        }
-        return true;
+        return !(Array.isArray(data) && data.length === 0);
 
     }
 
@@ -133,7 +131,7 @@ export class MaintenanceController {
      * Récupération des maintenances via :
      * @param manager
      */
-    async getMaintenanceByManager(manager:string): Promise<MaintenanceModel[] | LogError> {
+    async getMaintenanceByManager(manager: string): Promise<MaintenanceModel[] | LogError> {
 
         const res = await this.connection.query(`SELECT maintenance_id, date_hour_start, date_hour_end, space_id, manager_id 
                                                     FROM MAINTENANCE where manager_id = ${manager}`);
@@ -149,7 +147,7 @@ export class MaintenanceController {
                 });
             });
         }
-        return new LogError({numError:404,text:"No maintenance found"});
+        return new LogError({numError: 404, text: "No maintenance found"});
     }
 
     /**
@@ -173,7 +171,6 @@ export class MaintenanceController {
      */
     async createMaintenance(options: IMaintenanceProps): Promise<MaintenanceModel | LogError> {
         try {
-            console.log(options);
             const res = await this.connection.execute(
                 "INSERT INTO MAINTENANCE (maintenance_id, date_hour_start, date_hour_end, space_id, manager_id) VALUES (?,?,?,?,?)",
                 [
@@ -187,10 +184,10 @@ export class MaintenanceController {
             if (headers.affectedRows === 1) {
                 return this.getMaintenanceById(options.id);
             }
-            return new LogError({numError:400,text:"Couldn't create maintenance"});
+            return new LogError({numError: 400, text: "Couldn't create maintenance"});
         } catch (err) {
             console.error(err);
-            return new LogError({numError:400,text:"Couldn't create maintenance"});
+            return new LogError({numError: 400, text: "Couldn't create maintenance"});
         }
     }
 
@@ -208,10 +205,10 @@ export class MaintenanceController {
             if (headers.affectedRows === 1) {
                 return this.getMaintenanceById(maintenanceId);
             }
-            return new LogError({numError:400,text:"Couldn't close maintenance"});
+            return new LogError({numError: 400, text: "Couldn't close maintenance"});
         } catch (err) {
             console.error(err);
-            return new LogError({numError:400,text:"Couldn't close maintenance"});
+            return new LogError({numError: 400, text: "Couldn't close maintenance"});
         }
     }
 }
