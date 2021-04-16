@@ -23,4 +23,8 @@ export class MaintenanceModel implements IMaintenanceProps{
         this.spaceId = props.spaceId;
         this.managerId = props.managerId;
     }
+
+    dateStartAndEndAreEqual () {
+        return this.dateHourStart === this.dateHourEnd;
+    }
 }

@@ -107,11 +107,21 @@ maintenanceRouter.put("/:id",authUserMiddleWare, async function (req, res) {
         const connection = await DatabaseUtils.getConnection();
         const maintenanceController = new MaintenanceController(connection);
         //modification
-        const maintenance = await maintenanceController.closeMaintenance(id);
-        if (maintenance instanceof LogError) {
-            LogError.HandleStatus(res, maintenance);
-        } else {
-            res.json(maintenance);
+        let maintenance = await maintenanceController.getMaintenanceById(id);
+        if (!(maintenance instanceof LogError)) {
+            if (maintenance.dateStartAndEndAreEqual()) {
+                maintenance = await maintenanceController.closeMaintenance(id);
+                if (maintenance instanceof LogError) {
+                    LogError.HandleStatus(res, maintenance);
+                } else {
+                    res.json(maintenance);
+                }
+            } else {
+                LogError.HandleStatus(res, {
+                    numError: 304,
+                    text: ""
+                });
+            }
         }
     }
     LogError.HandleStatus(res, {
@@ -175,23 +185,30 @@ maintenanceRouter.post("/add", authUserMiddleWare,async function (req, res) {
 
         //Création d'une maintenance
         if (!isNaN(spaceId) && !isNaN(managerId)) {
-            const maintenance = await maintenanceController.createMaintenance({
-                id,
-                dateHourStart,
-                dateHourEnd,
-                spaceId,
-                managerId
-            });
-            if (maintenance instanceof LogError) {
-                LogError.HandleStatus(res, maintenance);
-                res.status(201);
-            } else {
-                res.json(maintenance);
-                LogError.HandleStatus(maintenance, {
-                    numError: 201,
-                    text: "Maintenance successfully created"
+            const isSpaceAvailable = await maintenanceController.isSpaceAvailable(spaceId);
+            if (isSpaceAvailable) {
+                const maintenance = await maintenanceController.createMaintenance({
+                    id,
+                    dateHourStart,
+                    dateHourEnd,
+                    spaceId,
+                    managerId
                 });
+                if (maintenance instanceof LogError) {
+                    LogError.HandleStatus(res, maintenance);
+                    res.status(201);
+                } else {
+                    res.json(maintenance);
+                    LogError.HandleStatus(maintenance, {
+                        numError: 201,
+                        text: "Maintenance successfully created"
+                    });
+                }
             }
+            LogError.HandleStatus(res, {
+                numError: 200,
+                text: "Maintenance already in progress"
+            });
         } else {
             LogError.HandleStatus(res, {
                 numError: 400,

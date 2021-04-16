@@ -114,6 +114,22 @@ export class MaintenanceController {
     }
 
     /**
+     * Vérifie si un espace est actuellement en maintenance ou non
+     * @param space
+     */
+    async isSpaceAvailable(space: number): Promise<boolean> {
+
+        const res = await this.connection.query(`SELECT * FROM MAINTENANCE WHERE date_hour_start = date_hour_end 
+                                                    AND space_id = ${space}`);
+        const data = res[0];
+        if (Array.isArray(data) && data.length !== 0) {
+            return false;
+        }
+        return true;
+
+    }
+
+    /**
      * Récupération des maintenances via :
      * @param manager
      */
