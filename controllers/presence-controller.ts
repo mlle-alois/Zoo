@@ -1,4 +1,4 @@
-import {IPresenceProps, PresenceModel, Timelimit} from "../models";
+import {IPresenceProps, LogError, PresenceModel, Timelimit} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {CLEANING_AGENT_ID, RECEPTIONIST_ID, SALESPERSON_ID, VETERINARY_ID} from "../consts";
 
@@ -202,8 +202,9 @@ export class PresenceController {
         }
 
     }
+
     /**
-     * Renvoie une string indiquant s"il y a assez de personnes disponibles pour l'ouverture du zoo
+     * Renvoie un booléen indiquant s'il y a assez de personnes disponibles pour l'ouverture du zoo
      * @param options
      *
      */
@@ -222,7 +223,7 @@ export class PresenceController {
                 const users = rows.map(function (el) {
                     return el["user_id"];
                 });
-            // Selectionne tous les user_type des users présents dans la tranche horaire
+                // Selectionne tous les user_type des users présents dans la tranche horaire
                 const resValidStaff = await this.connection.query('SELECT user_type_id FROM USER where user_id IN (?)', [users]);
                 const validStaff = resValidStaff[0];
 
@@ -239,7 +240,54 @@ export class PresenceController {
                         const veterinary = validStaffs.find(staff => staff === VETERINARY_ID);
                         const cleaningAgent = validStaffs.find(staff => staff === CLEANING_AGENT_ID);
                         const salesPerson = validStaffs.find(staff => staff === SALESPERSON_ID);
-                        
+
+                        return !!(receptionist && veterinary && cleaningAgent && salesPerson);
+
+                    }
+                }
+
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Renvoie un booléen pour savoir si le zoo est ouvert actuellement
+     */
+    async zooIsOpenNow(): Promise<boolean> {
+        const res = await this.connection.query(`SELECT user_id
+                                                 FROM PRESENCE
+                                                 WHERE dateHourStart_presence <= NOW()
+                                                   AND dateHourEnd_presence > NOW()`);
+        const data = res[0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length < 4)
+                return false;
+
+            if (rows.length > 0) {
+                // Converti le resultat dans un tableau d'index pour la deuxième selection
+                const users = rows.map(function (el) {
+                    return el["user_id"];
+                });
+                // Selectionne tous les user_type des users présents actuellement
+                const resValidStaff = await this.connection.query('SELECT user_type_id FROM USER where user_id IN (?)', [users]);
+                const validStaff = resValidStaff[0];
+
+                if (Array.isArray(validStaff)) {
+                    const rows = validStaff as RowDataPacket[];
+                    if (rows.length < 4)
+                        return false;
+                    if (rows.length > 0) {
+                        const validStaffs = rows.map(function (el) {
+                            return el["user_type_id"];
+                        });
+                        // Vérrifie s'il y a au moins un staff de chaque dans la selection, puis return true ou false
+                        const receptionist = validStaffs.find(staff => staff === RECEPTIONIST_ID);
+                        const veterinary = validStaffs.find(staff => staff === VETERINARY_ID);
+                        const cleaningAgent = validStaffs.find(staff => staff === CLEANING_AGENT_ID);
+                        const salesPerson = validStaffs.find(staff => staff === SALESPERSON_ID);
+
                         return !!(receptionist && veterinary && cleaningAgent && salesPerson);
 
                     }
@@ -258,9 +306,9 @@ export class PresenceController {
         return result.length <= 0;
     }
 
-   /* private async CheckIfLastPresenceIsEnded(options: IPresenceProps): Promise<boolean> {
-        const res1 = await this.connection.query(`SELECT presence_id, dateHourStart_presence, dateHourEnd_presence,user_id
-                                                    FROM PRESENCE WHERE dateHourEnd_presence IS NULL AND user_id = ${options.userId}`);
-        return !res1;
-    }*/
+    /* private async CheckIfLastPresenceIsEnded(options: IPresenceProps): Promise<boolean> {
+         const res1 = await this.connection.query(`SELECT presence_id, dateHourStart_presence, dateHourEnd_presence,user_id
+                                                     FROM PRESENCE WHERE dateHourEnd_presence IS NULL AND user_id = ${options.userId}`);
+         return !res1;
+     }*/
 }

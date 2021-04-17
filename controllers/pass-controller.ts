@@ -12,6 +12,7 @@ import {DateUtils} from "../Utils";
 import {PassTypeController} from "./pass-type-controller";
 import {SATURDAY, SUNDAY} from "../consts";
 import {SpaceController} from "./space-controller";
+import {PresenceController} from "./presence-controller";
 
 
 interface PassGetAllOptions {
@@ -305,8 +306,12 @@ export class PassController {
      * @param userId
      */
     async usePassForUserAtActualDate(passId: number, userId: number | undefined): Promise<UsePassUserDateModel | LogError> {
+        const presenceController = new PresenceController(this.connection);
         if (userId === undefined)
-            return new LogError({numError: 400, text: "There is no user connected"})
+            return new LogError({numError: 400, text: "There is no user connected"});
+
+        if (!await presenceController.zooIsOpenNow())
+            return new LogError({numError: 409, text: "Zoo is not open"});
 
         //vérification que le billet existe
         const pass = await this.getPassById(passId);
