@@ -361,30 +361,52 @@ export class PassController {
      * @param options
      */
     async usePassInSpaceForUser(options: VisitSpacePassHourModel): Promise<VisitSpacePassHourModel | LogError> {
-        if (options.pass_id === undefined || options.space_id === undefined) {
+        const passTypeController = new PassTypeController(this.connection);
+        const spaceController = new SpaceController(this.connection);
+
+        if (options.pass_id === undefined || options.space_id === undefined)
             return new LogError({numError: 400, text: "passId and spaceId should be specified"});
-        }
+
         if (!await SpaceController.doesSpaceExist(options.space_id, this.connection))
             return new LogError({numError: 404, text: "this spaceId doesn't exist"});
+
+        if (!await this.doesPassExist(options.pass_id))
+            return new LogError({numError: 404, text: "this pass id doesn't exist"});
+
+        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
+        //vérification que le pass a déjà été validé à l'entrée du parc
+        if (!await this.passWasUsedToday({passId: options.pass_id, dateHour: actualDate}))
+            return new LogError({numError: 409, text: "Pass wasn't validated at the enter of the zoo today"})
+
+        const pass = await this.getPassById(options.pass_id);
+        if (pass instanceof LogError)
+            return pass;
+        const space = await spaceController.getSpaceById(options.space_id);
+        if (space instanceof LogError)
+            return space;
+        //Vérifier que le billet donne accès à l’espace
+        const access = await passTypeController.getAccessWithoutMaintenanceByPassAndSpace(pass, space);
+        if (access instanceof LogError) {
+            return access;
+        }
 
         // si besoin, va update la date de fin de la dernière visite de l'utilisateur avant d'en créer une nouvelle
         await this.updateLastVisitFrom(options);
 
-        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
         try {
             const actualDateString = DateUtils.convertDateToISOString(actualDate);
             await this.connection.execute("INSERT INTO DATE_HOUR (date_hour) VALUES (?)", [
                 actualDateString
             ]);
             // Ajoute la visite
-            const res = await this.connection.execute("INSERT INTO VISIT_SPACE_PASS_HOUR (pass_id,date_hour_enter, space_id) VALUES (?, ?,?)", [
+            const res = await this.connection.execute("INSERT INTO VISIT_SPACE_PASS_HOUR (pass_id,date_hour_enter, space_id) VALUES (?, ?, ?)", [
                 options.pass_id,
                 actualDateString,
                 options.space_id
             ]);
             const headers = res[0] as ResultSetHeader;
             if (headers.affectedRows === 1) {
-                return this.getLastVisitFrom(options);
+                return this.getLastVisitOfTheDayByPass(options);
             }
             return new LogError({numError: 400, text: "Visit failed"});
         } catch (err) {
@@ -394,16 +416,22 @@ export class PassController {
     }
 
     /**
-     * Retourn la dernière visite en fonction du pass et de l'espace
+     * Retourne la dernière visite en fonction du pass
      * @param options
      */
-    async getLastVisitFrom(options: IVisitSpacePassHourModelProps): Promise<VisitSpacePassHourModel | LogError> {
-        if (options.pass_id === undefined || options.space_id === undefined) {
-            return new LogError({numError: 400, text: "passId and spaceId should be specified"});
+    async getLastVisitOfTheDayByPass(options: IVisitSpacePassHourModelProps): Promise<VisitSpacePassHourModel | LogError> {
+        if (options.pass_id === undefined) {
+            return new LogError({numError: 400, text: "passId should be specified"});
         }
 
         const res = await this.connection.query(`SELECT pass_id, date_hour_enter, space_id, date_hour_exit
-                                                    FROM VISIT_SPACE_PASS_HOUR where pass_id = ${options.pass_id} AND space_id = ${options.space_id} ORDER BY date_hour_enter DESC LIMIT 1`);
+                                                    FROM VISIT_SPACE_PASS_HOUR 
+                                                    WHERE pass_id = ${options.pass_id}
+                                                    AND DAY(date_hour_enter) = DAY(NOW())
+                                                    AND MONTH(date_hour_enter) = MONTH(NOW())
+                                                    AND YEAR(date_hour_enter) = YEAR(NOW())
+                                                    ORDER BY date_hour_enter DESC 
+                                                    LIMIT 1`);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
@@ -417,7 +445,7 @@ export class PassController {
                 });
             }
         }
-        return new LogError({numError: 404, text: "Visit not found"});
+        return new LogError({numError: 404, text: "0 Visit found"});
     }
 
     /**

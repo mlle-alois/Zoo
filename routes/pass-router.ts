@@ -216,7 +216,7 @@ passRouter.post("/visit", authUserMiddleWare, async function (req, res) {
         res.status(400).end();
         return;
     }
-    //TODO controle du droit d'accès à l'espace
+
     const visit = await passController.usePassInSpaceForUser({pass_id:passId,space_id:spaceId})
 
     if (visit instanceof LogError) {
@@ -224,8 +224,6 @@ passRouter.post("/visit", authUserMiddleWare, async function (req, res) {
         return;
     }
     res.json(visit);
-
-
 });
 
 /**

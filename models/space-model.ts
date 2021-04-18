@@ -1,5 +1,5 @@
 export interface ISpaceProps {
-    spaceId?: number;
+    spaceId: number;
     spaceName?: string;
     spaceDescription?: string;
     spaceCapacity?: number;
@@ -10,7 +10,7 @@ export interface ISpaceProps {
 }
 
 export class SpaceModel implements ISpaceProps {
-    spaceId?: number;
+    spaceId: number;
     spaceName?: string;
     spaceDescription?: string;
     spaceCapacity?: number;
@@ -20,7 +20,7 @@ export class SpaceModel implements ISpaceProps {
     spaceTypeId?: number;
 
     constructor(props: ISpaceProps) {
-        this.spaceId = props?.spaceId;
+        this.spaceId = props.spaceId;
         this.spaceName = props?.spaceName;
         this.spaceDescription = props?.spaceDescription;
         this.spaceCapacity = props?.spaceCapacity;

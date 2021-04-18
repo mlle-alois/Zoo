@@ -3,9 +3,11 @@ import {IPassTypeProps, PassTypeModel} from "../models/pass-type-model";
 import {
     AccessPassSpaceModel,
     IAccessPassSpaceModelProps,
-    LogError
+    LogError, PassModel, SpaceModel
 } from "../models";
 import {SpaceController} from "./space-controller";
+import {PassController} from "./pass-controller";
+import {MaintenanceController} from "./maintenance-controller";
 
 interface PassTypeGetAllOptions {
     limit?: number;
@@ -226,18 +228,17 @@ export class PassTypeController {
      * @param options
      */
     async createAccessForPassTypeAtSpace(options: IAccessPassSpaceModelProps): Promise<AccessPassSpaceModel | LogError> {
-        const passTypeController = new PassTypeController(this.connection);
 
         //vérification que l'espace existe
         if (!await SpaceController.doesSpaceExist(options.spaceId, this.connection)) {
             return new LogError({numError: 409, text: "L\'espace renseigné n\'existe pas"});
         }
         //vérification que le type de billet existe
-        if (!await passTypeController.doesPassTypeExist(options.passTypeId)) {
+        if (!await PassTypeController.doesPassTypeExist(options.passTypeId, this.connection)) {
             return new LogError({numError: 409, text: "Le type de billet renseigné n\'existe pas"});
         }
         //vérification si le type de billet a déjà accès à l'espace
-        const passTypeAccess = await passTypeController.getAccessByPassTypeIdAndSpaceId(options.passTypeId, options.spaceId);
+        const passTypeAccess = await this.getAccessByPassTypeIdAndSpaceId(options.passTypeId, options.spaceId);
         if (!(passTypeAccess instanceof LogError)) {
             return new LogError({
                 numError: 409,
@@ -245,7 +246,7 @@ export class PassTypeController {
             });
         }
         //numéro d'ordre récupéré si le billet est un escape game
-        if (await passTypeController.isEscapeGamePassType(options.passTypeId)) {
+        if (await this.isEscapeGamePassType(options.passTypeId)) {
             options.numOrderAccess = await this.getMaxOrderByPassTypeIdAndSpaceId(options.passTypeId, options.spaceId) + 1;
         } else {
             options.numOrderAccess = 0;
@@ -265,6 +266,138 @@ export class PassTypeController {
             console.error(err);
             return new LogError({numError: 400, text: "Couldn't create access"});
         }
+    }
+
+    /**
+     * récupération de l'ordre des id des espaces auquel le pass a accès :
+     * @param pass
+     */
+    async getOrderAccessOfSpaceIdByPass(pass: PassModel): Promise<number[] | LogError> {
+        try {
+            const res = await this.connection.query(`SELECT space_id
+                                                     FROM GIVE_ACCESS_PASS_TYPE_SPACE
+                                                     WHERE pass_type_id = ?
+                                                     ORDER BY num_order_access`, [
+                pass.passTypeId
+            ]);
+            const data = res[0];
+            if (Array.isArray(data)) {
+                if ((data as RowDataPacket[]).length > 0) {
+                    return (data as RowDataPacket[]).map(function (row: any) {
+                        return row["space_id"];
+                    });
+                } else {
+                    return new LogError({numError: 404, text: "Pass don't have any access"});
+                }
+            } else {
+                return new LogError({numError: 404, text: "Pass don't have any access"});
+            }
+        } catch (err) {
+            console.error(err);
+            return new LogError({numError: 404, text: "Access not found"});
+        }
+    }
+
+    /**
+     * récupération d'un accès selon :
+     * @param pass
+     * @param space
+     * pas d'accès aux espaces en maintenance
+     * Escape Game : L’utilisateur a déjà visité l’espace précédent dans l’ordre
+     *  Pas 2 fois accès aux espaces
+     *  Attention aux espaces en maintenance présents dans l’ordre qui doivent donner accès à l’espace suivant
+     *  Attention aux erreurs dans l’ordre qui doivent permettre de suivre un ordre logique (ex : 1 2 4 5 → pas de
+     *  numéro 3 donc avoir visité le numéro 2 donne accès au 4)
+     */
+    async getAccessWithoutMaintenanceByPassAndSpace(pass: PassModel, space: SpaceModel): Promise<AccessPassSpaceModel | LogError> {
+        const passController = new PassController(this.connection);
+        const maintenanceController = new MaintenanceController(this.connection);
+        const spaceController = new SpaceController(this.connection);
+        let access: AccessPassSpaceModel;
+        //vérifie que le pass a accès à l'espace actuel et n'est pas en maintenance
+        try {
+            const res = await this.connection.query(`SELECT DISTINCT GAPTS.pass_type_id,
+                                                                     GAPTS.space_id,
+                                                                     GAPTS.num_order_access
+                                                     FROM GIVE_ACCESS_PASS_TYPE_SPACE GAPTS
+                                                     WHERE GAPTS.pass_type_id = ?
+                                                       AND GAPTS.space_id = ?
+                                                       AND GAPTS.space_id NOT IN (SELECT space_id
+                                                                                  FROM MAINTENANCE
+                                                                                  WHERE space_id = ?
+                                                                                    AND MAINTENANCE.date_hour_start < NOW()
+                                                                                    AND MAINTENANCE.date_hour_end > NOW())`, [
+                pass.passTypeId,
+                space.spaceId,
+                space.spaceId
+            ]);
+            const data = res[0];
+            if (Array.isArray(data)) {
+                const rows = data as RowDataPacket[];
+                if (rows.length > 0) {
+                    const row = rows[0];
+                    access = new AccessPassSpaceModel({
+                        passTypeId: Number.parseInt(row["pass_type_id"]),
+                        spaceId: Number.parseInt(row["space_id"]),
+                        numOrderAccess: Number.parseInt(row["num_order_access"])
+                    });
+                } else
+                    return new LogError({numError: 404, text: "Access not found or current maintenance"});
+            } else
+                return new LogError({numError: 404, text: "Access not found or current maintenance"});
+        } catch (err) {
+            console.error(err);
+            return new LogError({numError: 404, text: "Access not found or current maintenance"});
+        }
+
+        if (pass.passTypeId === undefined)
+            return new LogError({numError: 400, text: "Pass don't have pass type"})
+
+        //vérification de l'accès selon l'ordre escape game
+        const isEscapeGamePass = await this.isEscapeGamePassType(pass.passTypeId);
+        if (isEscapeGamePass) {
+            //les pass escape game n'ont accès qu'une seule fois à l'espace
+            const haveVisited = await spaceController.spaceWasVisitedByPassToday(pass, space);
+            if (haveVisited)
+                return new LogError({numError: 409, text: "The space has already been visited by this pass today"});
+
+            const orderOfSpace = await this.getOrderAccessOfSpaceIdByPass(pass);
+            if (orderOfSpace instanceof LogError)
+                return orderOfSpace;
+
+            const lastVisit = await passController.getLastVisitOfTheDayByPass({
+                pass_id: pass.passId,
+                space_id: space.spaceId
+            });
+
+            let i = orderOfSpace.findIndex(element => element == space.spaceId) - 1;
+            if (i > 0) {
+                do {
+                    //les espaces en maintenance ne sont pas pris en compte dans l'ordre
+                    if (!await maintenanceController.isSpaceAvailable(i)) {
+                        orderOfSpace.splice(i);
+                        i -= 1;
+                        continue;
+                    }
+                    if (!(lastVisit instanceof LogError)) {
+                        if (lastVisit.space_id !== orderOfSpace[i]) {
+                            return new LogError({
+                                numError: 409,
+                                text: `You must visit space ${orderOfSpace[i]} before having access to this space`
+                            });
+                        } else {
+                            break;
+                        }
+                    } else {
+                        return new LogError({
+                            numError: 409,
+                            text: `You must visit space ${orderOfSpace[i]} before having access to this space`
+                        });
+                    }
+                } while (i >= 0);
+            }
+        }
+        return access;
     }
 
     /**
@@ -390,9 +523,10 @@ export class PassTypeController {
     /**
      * Vrai si le type de billet existe
      * @param passTypeId
+     * @param connection
      */
-    async doesPassTypeExist(passTypeId: number): Promise<boolean> {
-        const isTreatmentValid = await this.connection.query(`SELECT pass_type_id FROM PASS_TYPE WHERE pass_type_id = ${passTypeId}`);
+    static async doesPassTypeExist(passTypeId: number, connection: Connection): Promise<boolean> {
+        const isTreatmentValid = await connection.query(`SELECT pass_type_id FROM PASS_TYPE WHERE pass_type_id = ${passTypeId}`);
         const result = isTreatmentValid[0] as RowDataPacket[];
         return result.length > 0;
     }
