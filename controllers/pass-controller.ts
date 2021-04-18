@@ -310,7 +310,8 @@ export class PassController {
         if (userId === undefined)
             return new LogError({numError: 400, text: "There is no user connected"});
 
-        if (!await presenceController.zooIsOpenNow())
+        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
+        if (!await presenceController.isZooCouldBeOpen({dateStart: actualDate, dateEnd: actualDate}))
             return new LogError({numError: 409, text: "Zoo is not open"});
 
         //vérification que le billet existe
@@ -322,7 +323,6 @@ export class PassController {
         if (pass.userId !== userId) {
             return new LogError({numError: 403, text: "It's not your pass"});
         }
-        const actualDate = new Date(DateUtils.getCurrentTimeStamp());
         try {
             const actualDateString = DateUtils.convertDateToISOString(actualDate);
             //vérification que le pass est valide

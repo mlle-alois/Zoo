@@ -1,6 +1,7 @@
 import {IPresenceProps, LogError, PresenceModel, Timelimit} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {CLEANING_AGENT_ID, RECEPTIONIST_ID, SALESPERSON_ID, VETERINARY_ID} from "../consts";
+import {DateUtils} from "../Utils";
 
 
 interface PresenceGetAllOptions {
@@ -210,8 +211,13 @@ export class PresenceController {
      */
     async isZooCouldBeOpen(options: Timelimit): Promise<boolean | null> {
         // selectionne les utilisateurs présents dans la tranche horaires
-        const res = await this.connection.query(`SELECT user_id 
-                                                    FROM PRESENCE where dateHourStart_presence >= "${options.dateStart}" AND dateHourEnd_presence <= "${options.dateEnd}"`);
+        const res = await this.connection.query(`SELECT user_id
+                                                 FROM PRESENCE
+                                                 WHERE dateHourStart_presence <= ?
+                                                   AND dateHourEnd_presence > ?`, [
+            DateUtils.convertDateToISOString(options.dateStart),
+            DateUtils.convertDateToISOString(options.dateEnd)
+        ]);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
@@ -250,54 +256,6 @@ export class PresenceController {
         }
         return false;
     }
-
-    /**
-     * Renvoie un booléen pour savoir si le zoo est ouvert actuellement
-     */
-    async zooIsOpenNow(): Promise<boolean> {
-        const res = await this.connection.query(`SELECT user_id
-                                                 FROM PRESENCE
-                                                 WHERE dateHourStart_presence <= NOW()
-                                                   AND dateHourEnd_presence > NOW()`);
-        const data = res[0];
-        if (Array.isArray(data)) {
-            const rows = data as RowDataPacket[];
-            if (rows.length < 4)
-                return false;
-
-            if (rows.length > 0) {
-                // Converti le resultat dans un tableau d'index pour la deuxième selection
-                const users = rows.map(function (el) {
-                    return el["user_id"];
-                });
-                // Selectionne tous les user_type des users présents actuellement
-                const resValidStaff = await this.connection.query('SELECT user_type_id FROM USER where user_id IN (?)', [users]);
-                const validStaff = resValidStaff[0];
-
-                if (Array.isArray(validStaff)) {
-                    const rows = validStaff as RowDataPacket[];
-                    if (rows.length < 4)
-                        return false;
-                    if (rows.length > 0) {
-                        const validStaffs = rows.map(function (el) {
-                            return el["user_type_id"];
-                        });
-                        // Vérrifie s'il y a au moins un staff de chaque dans la selection, puis return true ou false
-                        const receptionist = validStaffs.find(staff => staff === RECEPTIONIST_ID);
-                        const veterinary = validStaffs.find(staff => staff === VETERINARY_ID);
-                        const cleaningAgent = validStaffs.find(staff => staff === CLEANING_AGENT_ID);
-                        const salesPerson = validStaffs.find(staff => staff === SALESPERSON_ID);
-
-                        return !!(receptionist && veterinary && cleaningAgent && salesPerson);
-
-                    }
-                }
-
-            }
-        }
-        return false;
-    }
-
 
     private async isPresenceValid(options: IPresenceProps) {
         const isPresenceValid = await this.connection.query(`SELECT presence_id, dateHourStart_presence, dateHourEnd_presence,user_id 
