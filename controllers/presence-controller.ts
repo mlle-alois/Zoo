@@ -1,6 +1,7 @@
-import {IPresenceProps, PresenceModel, Timelimit} from "../models";
+import {IPresenceProps, LogError, PresenceModel, Timelimit} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {CLEANING_AGENT_ID, RECEPTIONIST_ID, SALESPERSON_ID, VETERINARY_ID} from "../consts";
+import {DateUtils} from "../Utils";
 
 
 interface PresenceGetAllOptions {
@@ -202,15 +203,21 @@ export class PresenceController {
         }
 
     }
+
     /**
-     * Renvoie une string indiquant s"il y a assez de personnes disponibles pour l'ouverture du zoo
+     * Renvoie un booléen indiquant s'il y a assez de personnes disponibles pour l'ouverture du zoo
      * @param options
      *
      */
     async isZooCouldBeOpen(options: Timelimit): Promise<boolean | null> {
         // selectionne les utilisateurs présents dans la tranche horaires
-        const res = await this.connection.query(`SELECT user_id 
-                                                    FROM PRESENCE where dateHourStart_presence >= "${options.dateStart}" AND dateHourEnd_presence <= "${options.dateEnd}"`);
+        const res = await this.connection.query(`SELECT user_id
+                                                 FROM PRESENCE
+                                                 WHERE dateHourStart_presence <= ?
+                                                   AND dateHourEnd_presence > ?`, [
+            DateUtils.convertDateToISOString(options.dateStart),
+            DateUtils.convertDateToISOString(options.dateEnd)
+        ]);
         const data = res[0];
         if (Array.isArray(data)) {
             const rows = data as RowDataPacket[];
@@ -222,7 +229,7 @@ export class PresenceController {
                 const users = rows.map(function (el) {
                     return el["user_id"];
                 });
-            // Selectionne tous les user_type des users présents dans la tranche horaire
+                // Selectionne tous les user_type des users présents dans la tranche horaire
                 const resValidStaff = await this.connection.query('SELECT user_type_id FROM USER where user_id IN (?)', [users]);
                 const validStaff = resValidStaff[0];
 
@@ -239,7 +246,7 @@ export class PresenceController {
                         const veterinary = validStaffs.find(staff => staff === VETERINARY_ID);
                         const cleaningAgent = validStaffs.find(staff => staff === CLEANING_AGENT_ID);
                         const salesPerson = validStaffs.find(staff => staff === SALESPERSON_ID);
-                        
+
                         return !!(receptionist && veterinary && cleaningAgent && salesPerson);
 
                     }
@@ -250,7 +257,6 @@ export class PresenceController {
         return false;
     }
 
-
     private async isPresenceValid(options: IPresenceProps) {
         const isPresenceValid = await this.connection.query(`SELECT presence_id, dateHourStart_presence, dateHourEnd_presence,user_id 
     FROM PRESENCE WHERE dateHourEnd_presence BETWEEN "${options.dateHourStart}" AND "${options.dateHourEnd}" AND dateHourStart_presence BETWEEN "${options.dateHourStart}" AND "${options.dateHourEnd}" AND user_id = ${options.userId}`);
@@ -258,9 +264,9 @@ export class PresenceController {
         return result.length <= 0;
     }
 
-   /* private async CheckIfLastPresenceIsEnded(options: IPresenceProps): Promise<boolean> {
-        const res1 = await this.connection.query(`SELECT presence_id, dateHourStart_presence, dateHourEnd_presence,user_id
-                                                    FROM PRESENCE WHERE dateHourEnd_presence IS NULL AND user_id = ${options.userId}`);
-        return !res1;
-    }*/
+    /* private async CheckIfLastPresenceIsEnded(options: IPresenceProps): Promise<boolean> {
+         const res1 = await this.connection.query(`SELECT presence_id, dateHourStart_presence, dateHourEnd_presence,user_id
+                                                     FROM PRESENCE WHERE dateHourEnd_presence IS NULL AND user_id = ${options.userId}`);
+         return !res1;
+     }*/
 }
