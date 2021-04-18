@@ -1,7 +1,6 @@
 import {IPresenceProps, LogError, PresenceModel, Timelimit} from "../models";
 import {Connection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
 import {CLEANING_AGENT_ID, RECEPTIONIST_ID, SALESPERSON_ID, VETERINARY_ID} from "../consts";
-import {DateUtils} from "../Utils";
 
 
 interface PresenceGetAllOptions {
@@ -215,8 +214,8 @@ export class PresenceController {
                                                  FROM PRESENCE
                                                  WHERE dateHourStart_presence <= ?
                                                    AND dateHourEnd_presence > ?`, [
-            DateUtils.convertDateToISOString(options.dateStart),
-            DateUtils.convertDateToISOString(options.dateEnd)
+            options.dateStart,
+            options.dateEnd
         ]);
         const data = res[0];
         if (Array.isArray(data)) {

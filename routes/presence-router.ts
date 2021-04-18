@@ -182,15 +182,21 @@ presenceRouter.post("/add", authUserMiddleWare, async function (req, res ) {
     res.status(403).end();
 });
 
-
+/**
+ * Vérifie si le Zoo pourrait être ouvert selon les dates reçus
+ * URL : /zoo/presence/open
+ * Requete : POST
+ * ACCES : Tous sauf CLIENT
+ * Nécessite d'être connecté : OUI
+ */
 presenceRouter.post("/open", authUserMiddleWare, async function (req, res) {
     //vérification droits d'accès
     if (!await isClientConnected(req)) {
         const connection = await DatabaseUtils.getConnection();
         const presenceController = new PresenceController(connection);
 
-        const presenceStart = req.body.dateStart;
-        const presenceEnd = req.body.dateEnd;
+        const presenceStart = req.body.dateStart; // ex "2021-04-03 18:34:48"
+        const presenceEnd = req.body.dateEnd; // ex : "2021-04-03 21:35:48"
 
         //toutes les informations sont obligatoires
         if (presenceStart === undefined || presenceEnd === undefined) {
