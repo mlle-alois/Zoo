@@ -30,8 +30,8 @@ export class MaintenanceController {
             return (data as RowDataPacket[]).map(function (row: any) {
                 return new MaintenanceModel({
                     id: Number.parseInt(row["maintenance_id"]),
-                    dateHourStart: DateUtils.convertDateToISOString(row["date_hour_start"]),
-                    dateHourEnd: DateUtils.convertDateToISOString(row["date_hour_end"]),
+                    dateHourStart: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_start"], 2)),
+                    dateHourEnd: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_end"], 2)),
                     spaceId: Number.parseInt(row["space_id"]),
                     managerId: Number.parseInt(row["manager_id"])
                 });
@@ -79,8 +79,8 @@ export class MaintenanceController {
                 const row = rows[0];
                 return new MaintenanceModel({
                     id: Number.parseInt(row["maintenance_id"]),
-                    dateHourStart: DateUtils.convertDateToISOString(row["date_hour_start"]),
-                    dateHourEnd: DateUtils.convertDateToISOString(row["date_hour_end"]),
+                    dateHourStart: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_start"], 2)),
+                    dateHourEnd: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_end"], 2)),
                     spaceId: Number.parseInt(row["space_id"]),
                     managerId: Number.parseInt(row["manager_id"])
                 });
@@ -102,8 +102,8 @@ export class MaintenanceController {
             return (data as RowDataPacket[]).map(function (row: any) {
                 return new MaintenanceModel({
                     id: Number.parseInt(row["maintenance_id"]),
-                    dateHourStart: DateUtils.convertDateToISOString(row["date_hour_start"]),
-                    dateHourEnd: DateUtils.convertDateToISOString(row["date_hour_end"]),
+                    dateHourStart: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_start"], 2)),
+                    dateHourEnd: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_end"], 2)),
                     spaceId: Number.parseInt(row["space_id"]),
                     managerId: Number.parseInt(row["manager_id"])
                 });
@@ -140,8 +140,8 @@ export class MaintenanceController {
             return (data as RowDataPacket[]).map(function (row: any) {
                 return new MaintenanceModel({
                     id: Number.parseInt(row["maintenance_id"]),
-                    dateHourStart: DateUtils.convertDateToISOString(row["date_hour_start"]),
-                    dateHourEnd: DateUtils.convertDateToISOString(row["date_hour_end"]),
+                    dateHourStart: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_start"], 2)),
+                    dateHourEnd: DateUtils.convertDateToISOString(DateUtils.addXHoursToDate(row["date_hour_end"], 2)),
                     spaceId: Number.parseInt(row["space_id"]),
                     managerId: Number.parseInt(row["manager_id"])
                 });
