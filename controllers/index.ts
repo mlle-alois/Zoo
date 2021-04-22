@@ -11,4 +11,5 @@ export * from './species-controller';
 export * from './treatment-controller';
 export * from './treatment-type-controller';
 export * from './user-controller';
+export * from './stats-controller';
 
