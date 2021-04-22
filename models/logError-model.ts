@@ -1,11 +1,11 @@
 export interface LogErrorProps {
     numError: number;
-    text: string;
+    text?: string;
 }
 
 export class LogError implements LogErrorProps{
     numError: number;
-    text: string;
+    text?: string;
 
 
     constructor(props: LogErrorProps) {

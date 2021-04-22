@@ -118,9 +118,7 @@ export class MaintenanceController {
      */
     async isSpaceAvailable(space: number): Promise<boolean> {
 
-        const res = await this.connection.query(`SELECT * FROM MAINTENANCE 
-                                                    WHERE date_hour_start < NOW()
-                                                    AND date_hour_end > NOW()
+        const res = await this.connection.query(`SELECT * FROM MAINTENANCE WHERE date_hour_start = date_hour_end
                                                     AND space_id = ${space}`);
         const data = res[0];
         return !(Array.isArray(data) && data.length === 0);
