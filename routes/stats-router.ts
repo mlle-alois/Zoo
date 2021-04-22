@@ -35,7 +35,7 @@ statsRouter.get("/:query", authUserMiddleWare, async function (req, res) {
                 case "day" :
                     stats = await statsController.getStatsByDay(spaceId, date, {limit, offset});
                     if (!(space instanceof LogError) && !(stats instanceof LogError)) {
-                        str = "L'influence de l'enclos " + "'" + space.spaceName + "'" + " le " + ("0" + date.getUTCDate()).slice(-2) + "/"
+                        str = "L'affluence de l'espace " + "'" + space.spaceName + "'" + " le " + ("0" + date.getUTCDate()).slice(-2) + "/"
                             + ("0" + (date.getMonth() + 1)).slice(-2) + "/" + ("0" + date.getFullYear()).slice(-2) + " est de : " + stats.affluenceDay;
                     }
                     break;
@@ -43,7 +43,7 @@ statsRouter.get("/:query", authUserMiddleWare, async function (req, res) {
                 case "week" :
                     stats = await statsController.getStatsByWeek(spaceId, date, {limit, offset});
                     if (!(space instanceof LogError) && !(stats instanceof LogError)) {
-                        str = "L'influence de l'enclos " + "'" + space.spaceName + "'" + " la semaine du " + ("0" + date.getUTCDate()).slice(-2) + "/"
+                        str = "L'affluence de l'espace " + "'" + space.spaceName + "'" + " la semaine du " + ("0" + date.getUTCDate()).slice(-2) + "/"
                             + ("0" + (date.getMonth() + 1)).slice(-2) + "/" + ("0" + date.getFullYear()).slice(-2) + " est de : " + stats.affluenceWeek;
                     }
                     break;
@@ -51,7 +51,7 @@ statsRouter.get("/:query", authUserMiddleWare, async function (req, res) {
                 case "month" :
                     stats = await statsController.getStatsByMonth(spaceId, date, {limit, offset});
                     if (!(space instanceof LogError) && !(stats instanceof LogError)) {
-                        str = "L'influence de l'enclos " + "'" + space.spaceName + "'" + " le mois de " +
+                        str = "L'affluence de l'espace " + "'" + space.spaceName + "'" + " le mois de " +
                             new Intl.DateTimeFormat('fr-FR', {month: "long"}).format(date) + " " + date.getFullYear() + " est de : " +
                             stats.affluenceMonth;
                     }
@@ -60,7 +60,7 @@ statsRouter.get("/:query", authUserMiddleWare, async function (req, res) {
                 case "year" :
                     stats = await statsController.getStatsByYear(spaceId, date, {limit, offset});
                     if (!(space instanceof LogError) && !(stats instanceof LogError)) {
-                        str = "L'influence de l'enclos " + "'" + space.spaceName + "'" + " pour l'année " +
+                        str = "L'affluence de l'espace " + "'" + space.spaceName + "'" + " pour l'année " +
                             date.getFullYear() + " est de : " + stats.affluenceYear;
                     }
                     break;
