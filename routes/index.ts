@@ -13,6 +13,7 @@ import {treatmentRouter} from "./treatment-router";
 import {mediaRouter} from "./media-router";
 import {maintenanceRouter} from "./maintenance-router"
 import {statsRouter} from "./stats-router";
+import {maintenanceBookRouter} from "./maintenanceBook-router";
 
 
 export function buildRoutes(app: Express) {
@@ -30,4 +31,5 @@ export function buildRoutes(app: Express) {
     app.use("/zoo/media", mediaRouter);
     app.use("/zoo/maintenance", maintenanceRouter);
     app.use("/zoo/stats", statsRouter);
+    app.use("/zoo/maintenanceBook", maintenanceBookRouter);
 }

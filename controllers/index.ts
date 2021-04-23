@@ -12,4 +12,5 @@ export * from './treatment-controller';
 export * from './treatment-type-controller';
 export * from './user-controller';
 export * from './stats-controller';
+export * from './maintenanceBook-controller';
 
