@@ -9,7 +9,7 @@ const statsRouter = express.Router();
 
 /**
  * Récupération des statistiques d'un enclos
- * URL : /zoo/stats/:query?[limit={x}&offset={x}]
+ * URL : /zoo/stats?[limit={x}&offset={x}]
  * Requete : GET
  * ACCES : Tous sauf CLIENT
  * Nécessite d'être connecté : OUI
@@ -84,10 +84,30 @@ statsRouter.get("/:query", authUserMiddleWare, async function (req, res) {
             LogError.HandleStatus(res, {numError: 400});
         }
     }
-    LogError.HandleStatus(res, {
-        numError: 403,
-        text: "Vous n'avez pas les droits d'accès"
-    });
+    LogError.HandleStatus(res, {numError: 403, text: "Vous n'avez pas les droits d'accès"});
+});
+
+/**
+ * Récupération des statistiques d'un enclos
+ * URL : /zoo/stats/
+ * Requete : GET
+ * ACCES : Tous sauf CLIENT
+ * Nécessite d'être connecté : OUI
+ */
+statsRouter.get("/", authUserMiddleWare, async function (req, res) {
+    //vérification droits d'accès
+    if (!await isClientConnected(req)) {
+        const connection = await DatabaseUtils.getConnection();
+        const statsController = new StatsController(connection);
+        const zooStatsList = await statsController.getZooStats();
+
+        if (!(zooStatsList instanceof LogError)) {
+            res.json(zooStatsList);
+        } else {
+            LogError.HandleStatus(res, zooStatsList);
+        }
+    }
+    LogError.HandleStatus(res, {numError: 403, text: "Vous n'avez pas les droits d'accès"});
 });
 
 export {

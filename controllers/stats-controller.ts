@@ -1,6 +1,7 @@
 import {LogError, StatsModel} from "../models"
 import {Connection, RowDataPacket} from "mysql2/promise";
 import {DateUtils} from "../Utils";
+import {SpaceController} from "./space-controller";
 
 interface StatsGetAllOptions {
     limit?: number;
@@ -132,5 +133,58 @@ export class StatsController {
             }
         }
         return new LogError({numError: 400, text: ""});
+    }
+
+    /**
+     * Stats des fréquentation du parc sur la journée en cours
+     */
+    async getZooStats(): Promise<Array<any> | LogError> {
+        //récupération des options
+        const spaceController = new SpaceController(this.connection);
+        const day = new Date();
+        day.setHours(0,0,0);
+        DateUtils.addXHoursToDate(day, 2);
+        const dayEnd = new Date(day);
+        DateUtils.addXHoursToDate(dayEnd, 24);
+        let res;
+        const frequencyArray = [];
+        let numberOfSpaces;
+
+        frequencyArray[0] = await this.connection.query(`SELECT COUNT(*) FROM VISIT_SPACE_PASS_HOUR WHERE
+                                                date_hour_enter BETWEEN '${DateUtils.convertDateToISOString(day)}'
+                                                AND '${DateUtils.convertDateToISOString(dayEnd)}'`);
+        let data = frequencyArray[0][0];
+        if (Array.isArray(data)) {
+            const rows = data as RowDataPacket[];
+            if (rows.length > 0) {
+                const row = rows[0];
+                numberOfSpaces = Number.parseInt(row["COUNT(*)"]);
+                if (numberOfSpaces === 0) {
+                    frequencyArray[0] = "Il n'y a personne dans le zoo actuellement.";
+                    return frequencyArray;
+                }
+                frequencyArray[0] = "Nombre de visiteurs dans le zoo : " + numberOfSpaces;
+            }
+        }
+        res = await this.connection.query(`SELECT space_id, COUNT(*) FROM VISIT_SPACE_PASS_HOUR WHERE 
+                                             date_hour_enter BETWEEN '${DateUtils.convertDateToISOString(day)}'
+                                             AND '${DateUtils.convertDateToISOString(dayEnd)}' GROUP BY space_id`);
+        data = res[0];
+        if (Array.isArray(data) && numberOfSpaces !== undefined) {
+            for (let i = 0; i < numberOfSpaces; i++) {
+                const rows = data as RowDataPacket[];
+                if (rows.length > 0) {
+                    const row = rows[0];
+                    const space = await spaceController.getSpaceById(rows[i].space_id);
+                    if (!(space instanceof LogError)) {
+                        frequencyArray[i + 1] = space.spaceName + " : " + Number.parseInt(row["COUNT(*)"]);
+                    } else {
+                        return new LogError({numError: 400});
+                    }
+                }
+            }
+            return frequencyArray
+        }
+        return new LogError({numError: 400});
     }
 }
