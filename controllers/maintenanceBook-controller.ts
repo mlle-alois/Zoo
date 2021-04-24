@@ -18,20 +18,19 @@ export class MaintenanceBookController {
         //récupération des options;
         const monthlyStats = new StatsController(this.connection);
         const year = new Date();
-        const array = [];
+        const array: number[] = [];
         year.setFullYear(year.getFullYear() - 1, 0, 1);
         year.setHours(0, 0, 0);
 
         for (let i = 0; i < 12; i++) {
             const res = await monthlyStats.getStatsByMonth(spaceId, year);
             if (!(res instanceof LogError)) {
-                array[i] = res.affluenceMonth;
+                array[i] = res.affluenceMonth as number;
                 year.setMonth(year.getMonth() + 1);
             } else {
                 return new LogError({numError: 400, text: ""});
             }
         }
-        // @ts-ignore
         return new MaintenanceBookModel(array);
     }
 }
