@@ -155,7 +155,6 @@ passTypeRouter.post("/add", authUserMiddleWare, async function (req, res) {
     res.status(403).end();
 });
 
-//TODO faire get all access, get access for pass id, get access for space id
 /**
  * donner à un type de billet l'accès à un espace
  * URL : /zoo/pass-type/give-access?passTypeId={x}&spaceId={x}

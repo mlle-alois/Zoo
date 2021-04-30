@@ -161,7 +161,7 @@ passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
     const passController = new PassController(connection);
 
     const passId = await passController.getMaxPassId() + 1;
-    const passTypeId = Number.parseInt(req.body.passTypeId);
+    const passTypeId = req.body.passTypeId;
     const userId = await getUserIdConnected(req);
     //toutes les informations sont obligatoires
     if (passId === undefined || passTypeId === undefined || userId === undefined) {
@@ -170,9 +170,8 @@ passRouter.post("/buy", authUserMiddleWare, async function (req, res) {
     }
     //vérifier que le billet est disponible à l'achat
     const passTypeController = new PassTypeController(connection);
-    const passType = await passTypeController.getPassTypeById(passTypeId);
+    const passType = await passTypeController.getPassTypeById(Number.parseInt(passTypeId));
 
-    //TODO refacto cette partie de code (en double avec la modification)
     if (passType instanceof LogError) {
         LogError.HandleStatus(res, passType);
         return;
